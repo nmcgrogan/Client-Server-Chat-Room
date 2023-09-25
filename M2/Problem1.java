@@ -24,4 +24,4 @@ for (int num : arr){
 System.out.println();
 System.out.println("End process");
     }
-}
+} 
