@@ -20,6 +20,25 @@ public class Problem3 {
         Object[] output = new Object[arr.length];
         //hint: use the arr variable; don't diretly use the a1-a4 variables
         //TODO convert each value to positive
+        for (int i = 0; i < arr.length; i++) {  if (arr[i] instanceof Number) {
+            if (arr[i] instanceof Integer) {
+                output[i] = Math.abs((Integer) arr[i]);
+            } else if (arr[i] instanceof Double) {
+                output[i] = Math.abs((Double) arr[i]);
+            }
+        } else if (arr[i] instanceof String) {
+            try {
+                output[i] = Math.abs(Double.parseDouble((String) arr[i]));
+            } catch (NumberFormatException e) {
+                System.out.println("Error converting string to double");
+                output[i] = null;
+            }
+        } else {
+            System.out.println("Unsupported data type");
+            output[i] = null;
+        }
+    }
+        
         //set the result to the proper index of the output array
         //hint: don't forget to handle the data types properly, the result datatype should be the same as the original datatype
         
