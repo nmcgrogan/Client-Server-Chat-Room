@@ -128,9 +128,13 @@ public class NumberGuesser4 {
         if (guess == number) {
             win();
             pickNewRandom = true;
-        } else {
-            System.out.println("That's wrong");
+        } else if (guess < number) {
+            System.out.println("Too low! Try a higher number.");
             strikes++;
+        } else {
+            System.out.println("Too high! Try a lower number.");
+            strikes++;
+        }
             if (strikes >= maxStrikes) {
                 lose();
                 pickNewRandom = true;

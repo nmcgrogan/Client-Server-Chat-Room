@@ -15,7 +15,28 @@ public class NumberGuesser4 {
     private Random random = new Random();
     private String fileName = "ng4.txt";
     private String[] fileHeaders = { "Level", "Strikes", "Number", "MaxLevel" };// used for demo readability
+    private void selectDifficulty() {
+        Scanner scanner = new Scanner(System.in);
 
+        System.out.println("Select difficulty level (1 - Easy, 2 - Medium, 3 - Hard): ");
+        int choice = scanner.nextInt();
+
+        switch (choice) {
+            case 1:
+                maxStrikes = 5;
+                break;
+            case 2:
+                maxStrikes = 3;
+                break;
+            case 3:
+                maxStrikes = 1;
+                break;
+            default:
+                System.out.println("Invalid choice. Defaulting to Easy.");
+                maxStrikes = 5;
+                break;
+        }
+    }
     private void saveState() {
         String[] data = { level + "", strikes + "", number + "", maxLevel + "" };
         String output = String.join(",", data);
@@ -120,24 +141,28 @@ public class NumberGuesser4 {
         }
     }
 
-    private void processGuess(int guess) {
-        if (guess < 0) {
-            return;
-        }
-        System.out.println("You guessed " + guess);
-        if (guess == number) {
-            win();
-            pickNewRandom = true;
-        } else {
-            System.out.println("That's wrong");
-            strikes++;
+    
+        private void processGuess(int guess) {
+            if (guess < 0) {
+                return;
+            }
+            System.out.println("You guessed " + guess);
+            if (guess == number) {
+                win();
+                pickNewRandom = true;
+            } else if (guess < number) {
+                System.out.println("Too low! Try a higher number.");
+                strikes++;
+            } else {
+                System.out.println("Too high! Try a lower number.");
+                strikes++;
+            }
+        
             if (strikes >= maxStrikes) {
                 lose();
                 pickNewRandom = true;
             }
         }
-    }
-
     private int strToNum(String message) {
         int guess = -1;
         try {
@@ -154,6 +179,7 @@ public class NumberGuesser4 {
         try (Scanner input = new Scanner(System.in);) {
             System.out.println("Welcome to NumberGuesser4.0");
             System.out.println("To exit, type the word 'quit'.");
+            selectDifficulty();//added method
             loadState();
             do {
                 if (pickNewRandom) {
