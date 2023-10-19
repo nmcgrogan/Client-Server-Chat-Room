@@ -1,8 +1,9 @@
-package Module4.Part3;
+package M4.Part2;
 
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.Scanner;
@@ -10,13 +11,11 @@ import java.util.Scanner;
 public class Client {
 
     Socket server = null;
-    ObjectOutputStream out = null;
-    ObjectInputStream in = null;
+    PrintWriter out = null;
+    BufferedReader in = null;
     final String ipAddressPattern = "connect\\s+(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}:\\d{3,5})";
     final String localhostPattern = "connect\\s+(localhost:\\d{3,5})";
     boolean isRunning = false;
-    private Thread inputThread;
-    private Thread fromServerThread;
 
     public Client() {
         System.out.println("");
@@ -45,11 +44,10 @@ public class Client {
         try {
             server = new Socket(address, port);
             // channel to send to server
-            out = new ObjectOutputStream(server.getOutputStream());
-            // channel to listen to server
-            in = new ObjectInputStream(server.getInputStream());
+            out = new PrintWriter(server.getOutputStream(), true);
+            // channelto list to server
+            in = new BufferedReader(new InputStreamReader(server.getInputStream()));
             System.out.println("Client connected");
-            listenForServerMessage();
         } catch (UnknownHostException e) {
             e.printStackTrace();
         } catch (IOException e) {
@@ -108,90 +106,56 @@ public class Client {
         return false;
     }
 
-    private void listenForKeyboard() {
-        inputThread = new Thread() {
-            @Override
-            public void run() {
-                System.out.println("Listening for input");
-                try (Scanner si = new Scanner(System.in);) {
-                    String line = "";
-                    isRunning = true;
-                    while (isRunning) {
-                        try {
-                            System.out.println("Waiting for input");
-                            line = si.nextLine();
-                            if (!processCommand(line)) {
-                                if (isConnected()) {
-                                    out.writeObject(line);
+    public void start() throws IOException {
 
-                                } else {
-                                    System.out.println("Not connected to server");
-                                }
+        System.out.println("Listening for input");
+        try (Scanner si = new Scanner(System.in);) {
+            String line = "";
+            isRunning = true;
+            while (isRunning) {
+                try {
+                    System.out.println("Waiting for input");
+                    line = si.nextLine();
+                    if (!processCommand(line)) {
+                        if (isConnected()) {
+                            out.println(line);
+                            // https://stackoverflow.com/a/8190411
+                            // you'll notice it triggers on the second request after server socket closes
+                            if (out.checkError()) {
+                                System.out.println("Connection to server may have been lost");
                             }
-                        } catch (Exception e) {
-                            System.out.println("Connection dropped");
-                            break;
+                            //wait for reply
+                            //Note: now that we're attempting a read
+                            //we'll immediately get notified if the server's connection closes
+                            //Note2: if the server terminates before we send a message, client will exit
+                            //after the out.println() continues
+                            String fromServer = in.readLine();
+
+                            if (fromServer != null) {
+                                System.out.println("Reply from server: " + fromServer);
+                            } else {
+                                System.out.println("Server disconnected");
+                                break;
+                            }
+                            
+                        } else {
+                            System.out.println("Not connected to server");
                         }
                     }
-                    System.out.println("Exited loop");
                 } catch (Exception e) {
-                    e.printStackTrace();
-                } finally {
-                    close();
+                    System.out.println("Connection dropped");
+                    break;
                 }
             }
-        };
-        inputThread.start();
-    }
-
-    private void listenForServerMessage() {
-        fromServerThread = new Thread() {
-            @Override
-            public void run() {
-                try {
-                    String fromServer;
-
-                    // while we're connected, listen for strings from server
-                    while (!server.isClosed() && !server.isInputShutdown()
-                            && (fromServer = (String) in.readObject().toString()) != null) {
-
-                        System.out.println(fromServer);
-                    }
-                    System.out.println("Loop exited");
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    if (!server.isClosed()) {
-                        System.out.println("Server closed connection");
-                    } else {
-                        System.out.println("Connection closed");
-                    }
-                } finally {
-                    close();
-                    System.out.println("Stopped listening to server input");
-                }
-            }
-        };
-        fromServerThread.start();// start the thread
-
-    }
-
-    public void start() throws IOException {
-        listenForKeyboard();
+            System.out.println("Exited loop");
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            close();
+        }
     }
 
     private void close() {
-        try {
-            inputThread.interrupt();
-        } catch (Exception e) {
-            System.out.println("Error interrupting input");
-            e.printStackTrace();
-        }
-        try {
-            fromServerThread.interrupt();
-        } catch (Exception e) {
-            System.out.println("Error interrupting listener");
-            e.printStackTrace();
-        }
         try {
             System.out.println("Closing output stream");
             out.close();

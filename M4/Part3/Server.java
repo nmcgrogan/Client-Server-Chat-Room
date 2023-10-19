@@ -1,9 +1,10 @@
-package Module4.Part3;
+package M4.Part3;
 
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -11,25 +12,40 @@ public class Server {
     int port = 3001;
     // connected clients
     private List<ServerThread> clients = new ArrayList<ServerThread>();
-
+    
+    public String shuffleMessage(String message) {
+        List<Character> characters = new ArrayList<>();
+        for (char c : message.toCharArray()) {
+            characters.add(c);
+        }
+        Collections.shuffle(characters);
+        StringBuilder shuffledMessage = new StringBuilder();
+        for (char c : characters) {
+            shuffledMessage.append(c);
+        }
+        System.out.println("Original: " + message + " | Shuffled: " + shuffledMessage.toString());  // debug line
+        return shuffledMessage.toString();
+    }
     private void start(int port) {
         this.port = port;
         // server listening
         try (ServerSocket serverSocket = new ServerSocket(port);) {
-            Socket incoming_client = null;
             System.out.println("Server is listening on port " + port);
-            do {
+            while (true) {  
                 System.out.println("waiting for next client");
+                Socket incoming_client = serverSocket.accept(); // <--- Keep this one
                 if (incoming_client != null) {
                     System.out.println("Client connected");
                     ServerThread sClient = new ServerThread(incoming_client, this);
-                    
                     clients.add(sClient);
                     sClient.start();
-                    incoming_client = null;
-                    
+
+                    // This section is questionable; unsure of its purpose in the server code.
+                    // Commented it out for now.
+                    // Client clientInstance = new Client();
+                    // clientInstance.setServerThread(sClient);
                 }
-            } while ((incoming_client = serverSocket.accept()) != null);
+            }
         } catch (IOException e) {
             System.err.println("Error accepting connection");
             e.printStackTrace();
@@ -44,6 +60,13 @@ public class Server {
 	}
     
     protected synchronized void broadcast(String message, long id) {
+        if (message.toLowerCase().startsWith("shuffle ")) {
+            String messageToShuffle = message.substring("shuffle ".length());
+            String shuffledMessage = shuffleMessage(messageToShuffle);
+            // Send back the shuffled message to the client who sent the command
+            sendToClient(shuffledMessage, id);
+            return; // Exit the method after processing the command
+        }
         if(processCommand(message, id)){
 
             return;
@@ -51,9 +74,10 @@ public class Server {
         // let's temporarily use the thread id as the client identifier to
         // show in all client's chat. This isn't good practice since it's subject to
         // change as clients connect/disconnect
-        message = String.format("User[%d]: %s", id, message);
-        // end temp identifier
-        
+        if (!message.startsWith("User[")) {
+            message = String.format("User[%d]: %s", id, message);
+        }
+        // end temp identifier 
         // loop over clients and send out the message
         Iterator<ServerThread> it = clients.iterator();
         while (it.hasNext()) {
@@ -66,7 +90,15 @@ public class Server {
             }
         }
     }
-
+    protected synchronized void sendToClient(String message, long clientId) {
+        for (ServerThread client : clients) {
+            if (client.getId() == clientId) {
+                System.out.println("Sending to client with ID: " + clientId); 
+                client.send(message);
+                break;
+            }
+        }
+    }
     private boolean processCommand(String message, long clientId){
         System.out.println("Checking command: " + message);
         if(message.equalsIgnoreCase("disconnect")){

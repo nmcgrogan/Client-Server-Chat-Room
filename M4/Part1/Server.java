@@ -1,4 +1,4 @@
-package Module4.Part1;
+package M4.Part1;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -40,6 +40,13 @@ public class Server {
         }
     }
 
+    /**
+     * @return
+     */
+    public String flipCoin() {
+        return Math.random() < 0.5 ? "Heads" : "Tails";
+    }
+
     public static void main(String[] args) {
         System.out.println("Starting Server");
         Server server = new Server();
@@ -52,5 +59,8 @@ public class Server {
         }
         server.start(port);
         System.out.println("Server Stopped");
+    }
+
+    public void broadcast(String fromClient, long id) {
     }
 }

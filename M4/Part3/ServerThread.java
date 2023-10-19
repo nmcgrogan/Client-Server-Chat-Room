@@ -1,9 +1,12 @@
-package Module4.Part3;
+package M4.Part3;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * A server-side representation of a single client
@@ -11,20 +14,17 @@ import java.net.Socket;
 public class ServerThread extends Thread {
     private Socket client;
     private boolean isRunning = false;
-    private ObjectOutputStream out;//exposed here for send()
-    private Server server;// ref to our server so we can call methods on it
-    // more easily
-
+    private ObjectOutputStream out; //exposed here for send()
+    private Server server; // ref to our server so we can call methods on it more easily
+   
     private void info(String message) {
         System.out.println(String.format("Thread[%s]: %s", getId(), message));
     }
 
     public ServerThread(Socket myClient, Server server) {
         info("Thread created");
-        // get communication channels to single client
         this.client = myClient;
         this.server = server;
-
     }
 
     public void disconnect() {
@@ -40,8 +40,6 @@ public class ServerThread extends Thread {
             return true;
         } catch (IOException e) {
             info("Error sending message to client (most likely disconnected)");
-            // comment this out to inspect the stack trace
-            // e.printStackTrace();
             cleanup();
             return false;
         }
@@ -51,18 +49,24 @@ public class ServerThread extends Thread {
     public void run() {
         info("Thread starting");
         try (ObjectOutputStream out = new ObjectOutputStream(client.getOutputStream());
-                ObjectInputStream in = new ObjectInputStream(client.getInputStream());) {
+                ObjectInputStream in = new ObjectInputStream(client.getInputStream())) {
             this.out = out;
             isRunning = true;
             String fromClient;
-            while (isRunning && // flag to let us easily control the loop
-                    (fromClient = (String) in.readObject()) != null // reads an object from inputStream (null would
-                                                                    // likely mean a disconnect)
-            ) {
-
+            while (isRunning && (fromClient = (String) in.readObject()) != null) {
                 info("Received from client: " + fromClient);
-                server.broadcast(fromClient, this.getId());
-            } // close while loop
+
+                if (fromClient.startsWith("shuffle")) {
+                    String messageToShuffle = fromClient.substring("shuffle".length()).trim();
+                    String shuffledMessage = shuffleSimpleMessage(messageToShuffle);
+                    server.broadcast("User[" + this.getId() + "]: " + shuffledMessage, this.getId());
+                
+                } else {
+                    String fromClientName = "User[" + this.getId() + "]: ";
+                    server.broadcast(fromClientName + fromClient, this.getId());
+                }
+            }
+
         } catch (Exception e) {
             // happens when client disconnects
             e.printStackTrace();
@@ -72,6 +76,19 @@ public class ServerThread extends Thread {
             info("Exited thread loop. Cleaning up connection");
             cleanup();
         }
+    }
+
+    private String shuffleSimpleMessage(String message) {
+        List<Character> characters = new ArrayList<>();
+        for (char c : message.toCharArray()) {
+            characters.add(c);
+        }
+        Collections.shuffle(characters);
+        StringBuilder shuffledMessage = new StringBuilder();
+        for (char c : characters) {
+            shuffledMessage.append(c);
+        }
+        return shuffledMessage.toString();
     }
 
     private void cleanup() {
