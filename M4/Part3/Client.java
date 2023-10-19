@@ -132,6 +132,7 @@ public class Client {
                         try {
                             System.out.println("Waiting for input");
                             line = si.nextLine();
+                            
                             if (!processCommand(line)) {
                                 if (isConnected()) {
                                     out.writeObject(line);
