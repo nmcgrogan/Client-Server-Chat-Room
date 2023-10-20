@@ -8,7 +8,7 @@ import java.net.UnknownHostException;
 import java.util.Scanner;
 
 public class Client {
-    
+
     Socket server = null;
     ObjectOutputStream out = null;
     ObjectInputStream in = null;
@@ -17,12 +17,11 @@ public class Client {
     boolean isRunning = false;
     private Thread inputThread;
     private Thread fromServerThread;
-    public void setServerThread(ServerThread serverThread) {
+
+    public Client() {
+        System.out.println("");
     }
 
-    public Client(ServerThread serverThread) {
-        System.out.println("Client initialized");
-    }
     public boolean isConnected() {
         if (server == null) {
             return false;
@@ -105,22 +104,11 @@ public class Client {
         } else if (isQuit(text)) {
             isRunning = false;
             return true;
-        }else if (text.toLowerCase().startsWith("shuffle ")) {
-            String messageToShuffle = text.substring("shuffle ".length());
-            System.out.println("Sending shuffle command to server: " + messageToShuffle);
-            try {
-                out.writeObject(messageToShuffle);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            return true;
         }
-        
         return false;
     }
 
     private void listenForKeyboard() {
-        
         inputThread = new Thread() {
             @Override
             public void run() {
@@ -132,10 +120,10 @@ public class Client {
                         try {
                             System.out.println("Waiting for input");
                             line = si.nextLine();
-                            
                             if (!processCommand(line)) {
                                 if (isConnected()) {
                                     out.writeObject(line);
+
                                 } else {
                                     System.out.println("Not connected to server");
                                 }
@@ -162,13 +150,14 @@ public class Client {
             public void run() {
                 try {
                     String fromServer;
-    
+
                     // while we're connected, listen for strings from server
-                    while (!server.isClosed() && !server.isInputShutdown() && (fromServer = (String) in.readObject().toString()) != null) {
+                    while (!server.isClosed() && !server.isInputShutdown()
+                            && (fromServer = (String) in.readObject().toString()) != null) {
+
                         System.out.println(fromServer);
                     }
                     System.out.println("Loop exited");
-    
                 } catch (Exception e) {
                     e.printStackTrace();
                     if (!server.isClosed()) {
@@ -182,8 +171,10 @@ public class Client {
                 }
             }
         };
-        fromServerThread.start(); // start the thread
+        fromServerThread.start();// start the thread
+
     }
+
     public void start() throws IOException {
         listenForKeyboard();
     }
@@ -229,9 +220,10 @@ public class Client {
     }
 
     public static void main(String[] args) {
+        Client client = new Client();
+
         try {
-            // Just initialize the client and start it
-            Client client = new Client(null);
+            // if start is private, it's valid here since this main is part of the class
             client.start();
         } catch (IOException e) {
             e.printStackTrace();

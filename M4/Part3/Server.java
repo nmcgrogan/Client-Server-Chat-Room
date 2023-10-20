@@ -8,48 +8,29 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
-
 public class Server {
     int port = 3001;
     // connected clients
     private List<ServerThread> clients = new ArrayList<ServerThread>();
-    
-    public String shuffleMessage(String message) {
-        String[] parts = message.split(" ", 2);
-        if (parts.length == 2 && parts[0].equalsIgnoreCase("shuffle")) {
-            List<Character> characters = new ArrayList<>();
-            for (char c : parts[1].toCharArray()) {
-                characters.add(c);
-            }
-            Collections.shuffle(characters);
-            StringBuilder shuffledMessage = new StringBuilder();
-            for (char c : characters) {
-                shuffledMessage.append(c);
-            }
-            return "shuffle " + shuffledMessage.toString(); // return the shuffled message
-        }
-        return message;
-    }
+
     private void start(int port) {
         this.port = port;
         // server listening
-        try (ServerSocket serverSocket = new ServerSocket(port)) {
+        try (ServerSocket serverSocket = new ServerSocket(port);) {
+            Socket incoming_client = null;
             System.out.println("Server is listening on port " + port);
-            while (true) {
+            do {
                 System.out.println("waiting for next client");
-                Socket incoming_client = serverSocket.accept();
                 if (incoming_client != null) {
                     System.out.println("Client connected");
                     ServerThread sClient = new ServerThread(incoming_client, this);
+                    
                     clients.add(sClient);
                     sClient.start();
-
-                    // This section is questionable; unsure of its purpose in the server code.
-                    // Commented it out for now.
-                    // Client clientInstance = new Client();
-                    // clientInstance.setServerThread(sClient);
+                    incoming_client = null;
+                    
                 }
-            }
+            } while ((incoming_client = serverSocket.accept()) != null);
         } catch (IOException e) {
             System.err.println("Error accepting connection");
             e.printStackTrace();
@@ -64,12 +45,15 @@ public class Server {
 	}
     
     protected synchronized void broadcast(String message, long id) {
-        message = processCommands(message, id);
+        if(processCommand(message, id)){
 
-        if (!message.startsWith("User[")) {
-            message = String.format("User[%d]: %s", id, message);
+            return;
         }
-
+        // let's temporarily use the thread id as the client identifier to
+        // show in all client's chat. This isn't good practice since it's subject to
+        // change as clients connect/disconnect
+        message = String.format("User[%d]: %s", id, message);
+        // end temp identifier
         
         // loop over clients and send out the message
         Iterator<ServerThread> it = clients.iterator();
@@ -79,41 +63,55 @@ public class Server {
             if (!wasSuccessful) {
                 System.out.println(String.format("Removing disconnected client[%s] from list", client.getId()));
                 it.remove();
-                broadcast("User[" + id + "]: Disconnected", id);
+                broadcast("Disconnected", id);
             }
         }
     }
 
-    
-    public String processCommands(String message, long threadId) {
-        if (message.startsWith("shuffle")) {
-            String messageToShuffle = message.substring("shuffle".length()).trim();
-            System.out.println("Original message: " + messageToShuffle);
-    
-            ArrayList<Character> chars = new ArrayList<Character>(messageToShuffle.length());
-            for (char c : messageToShuffle.toCharArray()) {
-                chars.add(c);
+    private boolean processCommand(String message, long clientId){
+        System.out.println("Checking command: " + message);
+        if(message.equalsIgnoreCase("disconnect")){
+            Iterator<ServerThread> it = clients.iterator();
+            while (it.hasNext()) {
+                ServerThread client = it.next();
+                if(client.getId() == clientId){
+                    it.remove();
+                    disconnect(client);
+                    
+                    break;
+                }
             }
-            Collections.shuffle(chars);
-            char[] shuffled = new char[chars.size()];
-            for (int i = 0; i < shuffled.length; i++) {
-                shuffled[i] = chars.get(i);
-            }
-            String shuffledMessage = new String(shuffled);
-            System.out.println("Shuffled message: " + shuffledMessage);
-    
-            return shuffledMessage;
-        }
-        return message; 
+            return true;
+        } else if (message.toLowerCase().startsWith("shuffle ")) {
+            // Extract the content that needs to be shuffled
+            String contentToShuffle = message.substring(8);
+            String shuffledContent = shuffleString(contentToShuffle);
+            broadcast(shuffledContent, clientId); // Broadcast the shuffled content
+            return true;} // Command was handled, so return true
+        return false;
     }
-     public static void main(String[] args) {
+    private String shuffleString(String input) {
+    List<Character> characters = new ArrayList<>();
+    for (char c : input.toCharArray()) {
+        characters.add(c);
+    }
+    Collections.shuffle(characters);
+    StringBuilder shuffledString = new StringBuilder(input.length());
+    for (char c : characters) {
+        shuffledString.append(c);
+    }
+    return shuffledString.toString();
+}
+
+    public static void main(String[] args) {
         System.out.println("Starting Server");
         Server server = new Server();
         int port = 3000;
         try {
             port = Integer.parseInt(args[0]);
         } catch (Exception e) {
-            // default to the defined value prior to the try/catch
+            // can ignore, will either be index out of bounds or type mismatch
+            // will default to the defined value prior to the try/catch
         }
         server.start(port);
         System.out.println("Server Stopped");

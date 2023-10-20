@@ -61,11 +61,7 @@ public class ServerThread extends Thread {
             ) {
 
                 info("Received from client: " + fromClient);
-                String processedMessage = server.processCommands(fromClient, this.getId());
-            if (processedMessage.equals(fromClient)) {
-                // If it's not a command (like "shuffle"), just broadcast it as-is
                 server.broadcast(fromClient, this.getId());
-            }
             } // close while loop
         } catch (Exception e) {
             // happens when client disconnects
