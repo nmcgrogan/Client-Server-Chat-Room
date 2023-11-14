@@ -8,6 +8,7 @@ public class Payload implements Serializable {
 
     /**
      * Determines how to process the data on the receiver's side
+     * [nm874] 11/13/23
      */
     private PayloadType payloadType;
     private int diceCount;

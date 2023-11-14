@@ -1,5 +1,5 @@
 package Project1.Part6;
-
+//[nm874] 11/13/23
 public enum PayloadType {
     CONNECT, DISCONNECT, MESSAGE, CLIENT_ID, RESET_USER_LIST,
     SYNC_CLIENT, CREATE_ROOM, JOIN_ROOM, GET_ROOMS,
