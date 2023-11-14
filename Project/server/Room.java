@@ -3,6 +3,7 @@ package Project.server;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Random;
 import java.util.logging.Logger;
 
 import Project.common.Constants;
@@ -98,7 +99,7 @@ public class Room implements AutoCloseable {
 
     /***
      * Helper function to process messages to trigger different functionality.
-     * 
+     *
      * @param message The original message being sent
      * @param client  The sender of the message (since they'll be the ones
      *                triggering the actions)
@@ -106,6 +107,8 @@ public class Room implements AutoCloseable {
     @Deprecated // not used in my project as of this lesson, keeping it here in case things
                 // change
     private boolean processCommands(String message, ServerThread client) {
+        final String FLIP = "flip";
+        final String ROLL = "roll";
         boolean wasCommand = false;
         try {
             if (message.startsWith(COMMAND_TRIGGER)) {
@@ -129,6 +132,14 @@ public class Room implements AutoCloseable {
                     case LOGOFF:
                         Room.disconnectClient(client, this);
                         break;
+                        case FLIP://[nm874] 11/13/23
+                        processFlipCommand(client);
+                        break;
+            
+                    case ROLL:
+                        String rollCommand = comm2[1];
+                        processRollCommand(rollCommand, client);
+                        break;
                     default:
                         wasCommand = false;
                         break;
@@ -139,7 +150,39 @@ public class Room implements AutoCloseable {
         }
         return wasCommand;
     }
+private void processFlipCommand(ServerThread client) {
+    Random random = new Random();
+    String result = random.nextBoolean() ? "Heads" : "Tails";
+    // Send result back to client
+    // Implement according to how your server sends messages to clients
+}
+private void processRollCommand(String command, ServerThread client) {
+    Random random = new Random();
+    String resultMessage;
 
+    if (command.matches("\\d+")) {
+        // Single number roll, e.g., /roll 20
+        int max = Integer.parseInt(command);
+        int result = random.nextInt(max) + 1;
+        resultMessage = "Roll result: " + result;
+    } else if (command.matches("\\d+d\\d+")) {
+        // Dice roll, e.g., /roll 2d6
+        String[] parts = command.split("d");
+        int diceCount = Integer.parseInt(parts[0]);
+        int diceSides = Integer.parseInt(parts[1]);
+        int total = 0;
+        for (int i = 0; i < diceCount; i++) {
+            total += random.nextInt(diceSides) + 1;
+        }
+        resultMessage = "Roll result: " + total;
+    } else {
+        // If the command does not match any expected format
+        resultMessage = "Invalid roll command";
+    }
+
+    long clientId = client.getClientId(); // Retrieve the client's ID, adjust the method name as per your implementation
+client.sendMessage(clientId, resultMessage);
+}
     // Command helper methods
     protected static void getRooms(String query, ServerThread client) {
         String[] rooms = Server.INSTANCE.getRooms(query).toArray(new String[0]);
@@ -191,6 +234,8 @@ public class Room implements AutoCloseable {
             // it was a command, don't broadcast
             return;
         }
+        ChatHandler chatHandler = new ChatHandler();
+        String formattedMessage = chatHandler.processAllStyles(message);
         long from = sender == null ? Constants.DEFAULT_CLIENT_ID : sender.getClientId();
         Iterator<ServerThread> iter = clients.iterator();
         while (iter.hasNext()) {
@@ -229,3 +274,40 @@ public class Room implements AutoCloseable {
         clients.clear();
     }
 }
+/**
+ * Text Styling Processor
+ * UCID: [nm874]
+ * Date: [11/13/23]
+ * This class provides methods to process various text styles like bold, italics, color, and underline.
+ * It uses custom markup to denote different styles.
+ */
+class ChatHandler{
+// Method to process bold text
+// e.g., "**bold**" becomes "<b>bold</b>"
+String processBold(String input) {
+    return input.replaceAll("\\*\\*(.*?)\\*\\*", "<b>$1</b>");
+}
+// Method to process italic text
+// e.g., "_italics_" becomes "<i>italics</i>"
+String processItalics(String input) {
+    return input.replaceAll("_(.*?)_", "<i>$1</i>");
+}
+// Method to process colored text
+// e.g., "{color:#ff0000}red text{color}" becomes "<span style='color:#ff0000;'>red text</span>"
+String processColor(String input) {
+    return input.replaceAll("\\{color:(#?[0-9a-fA-F]{6})\\}(.*?)\\{color\\}", "<span style='color:$1;'>$2</span>");
+}
+// Method to process underline text
+// e.g., "__underline__" becomes "<u>underline</u>"
+String processUnderline(String input) {
+    return input.replaceAll("__(.*?)__", "<u>$1</u>");
+}
+// Method to process all styles
+String processAllStyles(String input) {
+    String processed = input;
+    processed = processBold(processed);
+    processed = processItalics(processed);
+    processed = processColor(processed);
+    processed = processUnderline(processed);
+    return processed;
+}}
