@@ -1,4 +1,4 @@
-package Project1.Part6;
+package Project.client;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -10,7 +10,11 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.Scanner;
 import java.util.logging.Logger;
-import java.util.Random;
+
+import Project.common.Constants;
+import Project.common.Payload;
+import Project.common.PayloadType;
+import Project.common.RoomResultPayload;
 
 public enum Client {
     Instance;
@@ -156,25 +160,25 @@ public enum Client {
         } else if (text.startsWith("/flip")) {
             sendFlipPayload();
             return true;
-        }
-            else if (text.equalsIgnoreCase("/users")) {
-                Iterator<Entry<Long, String>> iter = userList.entrySet().iterator();
-                System.out.println("Listing Local User List:");
-                if (userList.size() == 0) {
-                    System.out.println("No local users in list");
-                }
-                while (iter.hasNext()) {
-                    Entry<Long, String> user = iter.next();
-                    System.out.println(String.format("%s[%s]", user.getValue(), user.getKey()));
-                }
-                return true;
+        } else if (text.equalsIgnoreCase("/users")) {
+            Iterator<Entry<Long, String>> iter = userList.entrySet().iterator();
+            System.out.println("Listing Local User List:");
+            if (userList.size() == 0) {
+                System.out.println("No local users in list");
             }
-            return false;
+            while (iter.hasNext()) {
+                Entry<Long, String> user = iter.next();
+                System.out.println(String.format("%s[%s]", user.getValue(), user.getKey()));
+            }
+            return true;
         }
+        return false;
+    }
+
     private void sendRollPayload(String text) throws IOException {
         Payload p = new Payload();
         p.setPayloadType(PayloadType.ROLL);
-        if(text.matches("/roll \\d+")) {
+        if (text.matches("/roll \\d+")) {
             p.setDiceCount(1);
             p.setDiceSides(Integer.parseInt(text.substring(6)));
         } else {
@@ -184,12 +188,13 @@ public enum Client {
         }
         out.writeObject(p);
     }
-    
+
     private void sendFlipPayload() throws IOException {
         Payload p = new Payload();
         p.setPayloadType(PayloadType.FLIP);
         out.writeObject(p);
     }
+
     // Send methods
     protected void sendListRooms(String query) throws IOException {
         Payload p = new Payload();
@@ -373,39 +378,7 @@ public enum Client {
 
         }
     }
-    private boolean isRoll(String text) {
-        // Regular expression to match the roll command patterns
-        return text.matches("/roll \\d+") || text.matches("/roll \\d+d\\d+");
-    }
-    
-    private void handleRoll(String text) {
-        Random rand = new Random();
-        if(text.matches("/roll \\d+")) {
-            // Single number roll, e.g., /roll 12
-            int max = Integer.parseInt(text.substring(6)); // Extract number after "/roll "
-            int result = rand.nextInt(max) + 1; // Generate random number between 1 and max
-            System.out.println("Rolled: " + result);
-        } else {
-            // Dice roll, e.g., /roll 2d6
-            String[] parts = text.substring(6).split("d");
-            int diceCount = Integer.parseInt(parts[0]);
-            int diceSides = Integer.parseInt(parts[1]);
-            int total = 0;
-            for(int i = 0; i < diceCount; i++) {
-                total += rand.nextInt(diceSides) + 1;
-            }
-            System.out.println("Rolled total: " + total);
-        }
-    }
-    private boolean isFlip(String text) {
-        return text.equalsIgnoreCase("/flip");
-    }
-    
-    private void handleFlip() {
-        Random rand = new Random();
-        String result = rand.nextBoolean() ? "Heads" : "Tails";
-        System.out.println("Flipped: " + result);
-    }    
+
     @Deprecated // removing in Milestone3
     public void start() throws IOException {
         listenForKeyboard();

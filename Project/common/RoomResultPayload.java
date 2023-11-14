@@ -1,4 +1,4 @@
-package Project1.Part6;
+package Project.common;
 
 /**
  * Created so we don't need to modify the base payload
