@@ -1,4 +1,4 @@
-package Project1.Part6;
+package Project.server;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -9,6 +9,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 import java.util.logging.Logger;
+
+import Project.common.Constants;
 
 public enum Server {
     INSTANCE;
@@ -144,8 +146,8 @@ public enum Server {
             return false;
         } else {
             // TODO, all non-lobby rooms will be games
-            // Room room = new Room(roomName); //chatroom project can just use regular rooms
-            GameRoom room = new GameRoom(roomName); // all other projects
+            Room room = new Room(roomName); // chatroom project can just use regular rooms
+            // GameRoom room = new GameRoom(roomName); // all other projects
             rooms.add(room);
             logger.info(String.format("Created new room %s", roomName));
             return true;

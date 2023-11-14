@@ -1,4 +1,4 @@
-package Project1.Part6;
+package Project.server;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -8,10 +8,10 @@ import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import Project1.Part6.Constants;
-import Project1.Part6.Payload;
-import Project1.Part6.PayloadType;
-import Project1.Part6.RoomResultPayload;
+import Project.common.Payload;
+import Project.common.PayloadType;
+import Project.common.RoomResultPayload;
+import Project.common.Constants;
 
 /**
  * A server-side representation of a single client
@@ -191,65 +191,65 @@ public class ServerThread extends Thread {
 
     void processPayload(Payload p) throws IOException {
         {
-        if (p.getPayloadType() == PayloadType.ROLL) {
-            // Handle roll command
-            int diceCount = p.getDiceCount();
-            int diceSides = p.getDiceSides();
-            Random random = new Random();
-            int total = 0;
-            
-            for (int i = 0; i < diceCount; i++) {
-                total += random.nextInt(diceSides) + 1;
-            }
-            Payload resultPayload = new Payload();
-            resultPayload.setPayloadType(PayloadType.MESSAGE);
-            resultPayload.setMessage("Roll result: " + total);
-            // Assuming out is the ObjectOutputStream for the client
-            out.writeObject(resultPayload);
-        } else if (p.getPayloadType() == PayloadType.FLIP) {
-            // Handle flip command
-            Random random = new Random();
-            String result = random.nextBoolean() ? "Heads" : "Tails";
-            Payload resultPayload = new Payload();
-            resultPayload.setPayloadType(PayloadType.MESSAGE);
-            resultPayload.setMessage("Flip result: " + result);
-            // Assuming out is the ObjectOutputStream for the client
-            out.writeObject(resultPayload);
-        }
-    
-        // Handling other payload types
-        switch (p.getPayloadType()) {
-            case CONNECT:
-                setClientName(p.getClientName());
-                break;
-            case DISCONNECT:
-                Room.disconnectClient(this, getCurrentRoom());
-                break;
-            case MESSAGE:
-                if (currentRoom != null) {
-                    currentRoom.sendMessage(this, p.getMessage());
-                } else {
-                    // TODO migrate to lobby
-                    logger.log(Level.INFO, "Migrating to lobby on message with null room");
-                    Room.joinRoom(Constants.LOBBY, this);
+            if (p.getPayloadType() == PayloadType.ROLL) {
+                // Handle roll command
+                int diceCount = p.getDiceCount();
+                int diceSides = p.getDiceSides();
+                Random random = new Random();
+                int total = 0;
+
+                for (int i = 0; i < diceCount; i++) {
+                    total += random.nextInt(diceSides) + 1;
                 }
-                break;
-            case GET_ROOMS:
-                Room.getRooms(p.getMessage().trim(), this);
-                break;
-            case CREATE_ROOM:
-                Room.createRoom(p.getMessage().trim(), this);
-                break;
-            case JOIN_ROOM:
-                Room.joinRoom(p.getMessage().trim(), this);
-                break;
-            case READY:
-                // Additional case logic here
-                break;
-            default:
-                break;
+                Payload resultPayload = new Payload();
+                resultPayload.setPayloadType(PayloadType.MESSAGE);
+                resultPayload.setMessage("Roll result: " + total);
+                // Assuming out is the ObjectOutputStream for the client
+                out.writeObject(resultPayload);
+            } else if (p.getPayloadType() == PayloadType.FLIP) {
+                // Handle flip command
+                Random random = new Random();
+                String result = random.nextBoolean() ? "Heads" : "Tails";
+                Payload resultPayload = new Payload();
+                resultPayload.setPayloadType(PayloadType.MESSAGE);
+                resultPayload.setMessage("Flip result: " + result);
+                // Assuming out is the ObjectOutputStream for the client
+                out.writeObject(resultPayload);
+            }
+
+            // Handling other payload types
+            switch (p.getPayloadType()) {
+                case CONNECT:
+                    setClientName(p.getClientName());
+                    break;
+                case DISCONNECT:
+                    Room.disconnectClient(this, getCurrentRoom());
+                    break;
+                case MESSAGE:
+                    if (currentRoom != null) {
+                        currentRoom.sendMessage(this, p.getMessage());
+                    } else {
+                        // TODO migrate to lobby
+                        logger.log(Level.INFO, "Migrating to lobby on message with null room");
+                        Room.joinRoom(Constants.LOBBY, this);
+                    }
+                    break;
+                case GET_ROOMS:
+                    Room.getRooms(p.getMessage().trim(), this);
+                    break;
+                case CREATE_ROOM:
+                    Room.createRoom(p.getMessage().trim(), this);
+                    break;
+                case JOIN_ROOM:
+                    Room.joinRoom(p.getMessage().trim(), this);
+                    break;
+                case READY:
+                    // Additional case logic here
+                    break;
+                default:
+                    break;
+            }
         }
-    }
     }
 
     private void cleanup() {

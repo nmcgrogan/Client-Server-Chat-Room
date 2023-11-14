@@ -1,4 +1,4 @@
-package Project1.Part6;
+package Project.common;
 
 import java.io.Serializable;
 
@@ -12,8 +12,9 @@ public class Payload implements Serializable {
     private PayloadType payloadType;
     private int diceCount;
     private int diceSides;
-     // Getters and setters for diceCount and diceSides
-     public int getDiceCount() {
+
+    // Getters and setters for diceCount and diceSides
+    public int getDiceCount() {
         return diceCount;
     }
 
@@ -28,6 +29,7 @@ public class Payload implements Serializable {
     public void setDiceSides(int diceSides) {
         this.diceSides = diceSides;
     }
+
     public PayloadType getPayloadType() {
         return payloadType;
     }

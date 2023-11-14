@@ -1,11 +1,11 @@
-package Project1.Part6;
+package Project.server;
 
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Logger;
 
-import Project1.Part6.Constants;
+import Project.common.Constants;
 
 public class Room implements AutoCloseable {
     // server is a singleton now so we don't need this
