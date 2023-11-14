@@ -6,6 +6,9 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Random;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Server {
     int port = 3001;
@@ -145,4 +148,82 @@ public class Server {
         server.start(port);
         System.out.println("Server Stopped");
     }
+
+/**
+     * Handles the roll command with two different formats.
+     * /roll X will roll a number between 1 and X.
+     * /roll XdY will roll Y-sided dice X times.
+     * UCID: [nm874]
+     * Date: [11/12/23]
+     * @param command The roll command from the client.
+     * @return Result of the roll.
+     */
+    public String handleRollCommand(String command) {
+        final Pattern rollPattern = Pattern.compile("^/roll (\\d+)(d(\\d+))?$");
+        Matcher matcher = rollPattern.matcher(command);
+
+        if (matcher.find()) {
+            if (matcher.group(3) != null) {
+                // Roll dice in the format XdY (e.g., 2d6)
+                int rolls = Integer.parseInt(matcher.group(1));
+                int sides = Integer.parseInt(matcher.group(3));
+                return rollDice(rolls, sides);
+            } else {
+                // Roll a number from 1 to X (e.g., /roll 20)
+                int max = Integer.parseInt(matcher.group(1));
+                return "Rolled: " + rollNumber(1, max, null);
+            }
+        } else {
+            return "Invalid roll command";
+        }
+    }
+
+    private String rollDice(int rolls, int sides) {
+        Random random = new Random();
+        StringBuilder results = new StringBuilder();
+        for (int i = 0; i < rolls; i++) {
+            if (i > 0) results.append(", ");
+            results.append(rollNumber(1, sides, random));
+        }
+        return "Rolled dice: " + results;
+    }
+
+    private int rollNumber(int min, int max, Random random) {
+        return random.nextInt(max - min + 1) + min;
+    }
+
+/**
+ * Handles the flip command to simulate a coin toss.
+ * @return Result of the coin flip.
+ */
+public String handleFlipCommand() {
+    Random random = new Random();
+    return random.nextBoolean() ? "Heads" : "Tails";
 }
+/**
+ * Controller for handling various text commands, including text formatting.
+ * <p>
+ * This method checks if the input text contains specific patterns for text formatting
+ * such as bold, italics, color, and underline, and applies the corresponding transformations.
+ * Add more formatting options here as needed.
+ * </p>
+ *
+ * @param text The input text potentially containing formatting commands.
+ * @return The formatted text.
+ */
+public String handleTextFormatting(String text) {
+    // Processing for Bold text: *text* -> <b>text</b>
+    text = text.replaceAll("\\*(.*?)\\*", "<b>$1</b>");
+
+    // Processing for Italics text: _text_ -> <i>text</i>
+    text = text.replaceAll("_(.*?)_", "<i>$1</i>");
+
+    // Processing for Colored text: {#hexcode}text{} -> <span style='color:#hexcode;'>text</span>
+    // This will match hex color codes
+    text = text.replaceAll("\\{#([0-9A-Fa-f]{6})\\}(.*?)\\{\\}", "<span style='color:#$1;'>$2</span>");
+
+    // Processing for Underlined text: __text__ -> <u>text</u>
+    text = text.replaceAll("__(.*?)__", "<u>$1</u>");
+
+    return text;
+}}
