@@ -4,13 +4,19 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
-import java.util.Random;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import Project.common.CellData;
+import Project.common.CellPayload;
+import Project.common.Character;
+import Project.common.CharacterPayload;
 import Project.common.Constants;
 import Project.common.Payload;
 import Project.common.PayloadType;
+import Project.common.Phase;
+import Project.common.PositionPayload;
 import Project.common.RoomResultPayload;
 
 /**
@@ -79,6 +85,43 @@ public class ServerThread extends Thread {
     }
 
     // send methods
+    public boolean sendGridReset(){
+        Payload p = new Payload();
+        p.setPayloadType(PayloadType.GRID_RESET);
+        return send(p);
+    }
+    public boolean sendCells(List<CellData> cells){
+        CellPayload cp = new CellPayload();
+        cp.setCellData(cells);
+        return send(cp);
+    }
+
+    public boolean sendGridDimensions(int x, int y){
+        PositionPayload pp = new PositionPayload();
+        pp.setCoord(x, y);
+        pp.setPayloadType(PayloadType.GRID); //override default payload type
+        return send(pp);
+    }
+    public boolean sendCurrentTurn(long clientId) {
+        Payload p = new Payload();
+        p.setPayloadType(PayloadType.TURN);
+        p.setClientId(clientId);
+        return send(p);
+    }
+
+    public boolean sendCharacter(long clientId, Character character) {
+        CharacterPayload cp = new CharacterPayload();
+        cp.setCharacter(character);
+        cp.setClientId(clientId);
+        return send(cp);
+    }
+
+    public boolean sendPhaseSync(Phase phase) {
+        Payload p = new Payload();
+        p.setPayloadType(PayloadType.PHASE);
+        p.setMessage(phase.name());
+        return send(p);
+    }
 
     public boolean sendReadyStatus(long clientId) {
         Payload p = new Payload();
@@ -137,6 +180,7 @@ public class ServerThread extends Thread {
         p.setPayloadType(isConnected ? PayloadType.CONNECT : PayloadType.DISCONNECT);
         p.setClientId(clientId);
         p.setClientName(who);
+        // p.setMessage(isConnected ? "connected" : "disconnected");
         p.setMessage(String.format("%s the room %s", (isConnected ? "Joined" : "Left"), currentRoom.getName()));
         return send(p);
     }
@@ -188,72 +232,72 @@ public class ServerThread extends Thread {
             cleanup();
         }
     }
-//[nm874]11/13/23
-    void processPayload(Payload p) throws IOException {
-        {
-            if (p.getPayloadType() == PayloadType.ROLL) {
-                // Your updated roll handling code
-                int diceCount = p.getDiceCount();
-                int diceSides = p.getDiceSides();
-                Random random = new Random();
-                int total = 0;
-        
-                for (int i = 0; i < diceCount; i++) {
-                    total += random.nextInt(diceSides) + 1;
-                }
-        
-                Payload resultPayload = new Payload();
-                resultPayload.setPayloadType(PayloadType.MESSAGE);
-                resultPayload.setMessage("Roll result: " + total);
-                resultPayload.setClientId(myClientId);
-                resultPayload.setClientName(clientName);
-                out.writeObject(resultPayload);
-            } else if (p.getPayloadType() == PayloadType.FLIP) {
-                // Your updated flip handling code
-                Random random = new Random();
-                String result = random.nextBoolean() ? "Heads" : "Tails";
-        
-                Payload resultPayload = new Payload();
-                resultPayload.setPayloadType(PayloadType.MESSAGE);
-                resultPayload.setMessage("Flip result: " + result);
-                resultPayload.setClientId(myClientId);
-                resultPayload.setClientName(clientName);
-                out.writeObject(resultPayload);
-            }
 
-            // Handling other payload types
-            switch (p.getPayloadType()) {
-                case CONNECT:
-                    setClientName(p.getClientName());
-                    break;
-                case DISCONNECT:
-                    Room.disconnectClient(this, getCurrentRoom());
-                    break;
-                case MESSAGE:
-                    if (currentRoom != null) {
-                        currentRoom.sendMessage(this, p.getMessage());
+    void processPayload(Payload p) {
+        switch (p.getPayloadType()) {
+            case CONNECT:
+                setClientName(p.getClientName());
+                break;
+            case DISCONNECT:
+                Room.disconnectClient(this, getCurrentRoom());
+                break;
+            case MESSAGE:
+                if (currentRoom != null) {
+                    currentRoom.sendMessage(this, p.getMessage());
+                } else {
+                    // TODO migrate to lobby
+                    logger.log(Level.INFO, "Migrating to lobby on message with null room");
+                    Room.joinRoom(Constants.LOBBY, this);
+                }
+                break;
+            case GET_ROOMS:
+                Room.getRooms(p.getMessage().trim(), this);
+                break;
+            case CREATE_ROOM:
+                Room.createRoom(p.getMessage().trim(), this);
+                break;
+            case JOIN_ROOM:
+                Room.joinRoom(p.getMessage().trim(), this);
+                break;
+            case READY:
+                try {
+                    ((GameRoom) currentRoom).setReady(this);
+                } catch (Exception e) {
+                    logger.severe(String.format("There was a problem during readyCheck %s", e.getMessage()));
+                    e.printStackTrace();
+                }
+                break;
+            case CHARACTER:
+                try {
+                    CharacterPayload cp = (CharacterPayload) p;
+                    // Here I'm making the assumption if the passed Character is null, it's likely a
+                    // create request,
+                    // if the passed character is not null, then some of the properties will be used
+                    // for loading
+                    if (cp.getCharacter() == null) {
+                        ((GameRoom) currentRoom).createCharacter(this, cp.getCharacterType());
                     } else {
-                        // TODO migrate to lobby
-                        logger.log(Level.INFO, "Migrating to lobby on message with null room");
-                        Room.joinRoom(Constants.LOBBY, this);
+                        ((GameRoom) currentRoom).loadCharacter(this, cp.getCharacter());
                     }
-                    break;
-                case GET_ROOMS:
-                    Room.getRooms(p.getMessage().trim(), this);
-                    break;
-                case CREATE_ROOM:
-                    Room.createRoom(p.getMessage().trim(), this);
-                    break;
-                case JOIN_ROOM:
-                    Room.joinRoom(p.getMessage().trim(), this);
-                    break;
-                case READY:
-                    // Additional case logic here
-                    break;
-                default:
-                    break;
-            }
+                } catch (Exception e) {
+                    logger.severe(String.format("There was a problem during character handling %s", e.getMessage()));
+                    e.printStackTrace();
+                }
+                break;
+            case MOVE:
+                try {
+                    PositionPayload pp = (PositionPayload) p;
+                    ((GameRoom) currentRoom).handleMove(pp.getX(), pp.getY(), this);
+                } catch (Exception e) {
+                    logger.severe(String.format("There was a problem during position handling %s", e.getMessage()));
+                    e.printStackTrace();
+                }
+                break;
+            default:
+                break;
+
         }
+
     }
 
     private void cleanup() {

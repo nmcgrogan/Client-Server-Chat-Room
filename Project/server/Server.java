@@ -32,7 +32,7 @@ public enum Server {
             Socket incoming_client = null;
             logger.info(String.format("Server is listening on port %s", port));
             isRunning = true;
-            // Room.server = this;//since server is a singleton now we don't need this
+            Room.server = this;
             startQueueManager();
             // create a lobby on start
             lobby = new Room(Constants.LOBBY);
@@ -146,8 +146,8 @@ public enum Server {
             return false;
         } else {
             // TODO, all non-lobby rooms will be games
-            Room room = new Room(roomName); // chatroom project can just use regular rooms
-            // GameRoom room = new GameRoom(roomName); // all other projects
+            // Room room = new Room(roomName); //chatroom project can just use regular rooms
+            GameRoom room = new GameRoom(roomName); // all other projects
             rooms.add(room);
             logger.info(String.format("Created new room %s", roomName));
             return true;
@@ -217,13 +217,6 @@ public enum Server {
     private boolean processCommand(String message) {
         System.out.println("Checking command: " + message);
         // TODO
-        if (message.startsWith("/roll")) {
-            // Process roll command
-            return true;
-        } else if (message.equalsIgnoreCase("/flip")) {
-            // Process flip command
-            return true;
-        }
         return false;
     }
 

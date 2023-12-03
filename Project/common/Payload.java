@@ -10,25 +10,6 @@ public class Payload implements Serializable {
      * Determines how to process the data on the receiver's side
      */
     private PayloadType payloadType;
-    private int diceCount;
-    private int diceSides;
-
-    // Getters and setters for diceCount and diceSides
-    public int getDiceCount() {
-        return diceCount;
-    }
-
-    public void setDiceCount(int diceCount) {
-        this.diceCount = diceCount;
-    }
-
-    public int getDiceSides() {
-        return diceSides;
-    }
-
-    public void setDiceSides(int diceSides) {
-        this.diceSides = diceSides;
-    }
 
     public PayloadType getPayloadType() {
         return payloadType;
