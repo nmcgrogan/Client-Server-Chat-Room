@@ -232,8 +232,41 @@ public class ServerThread extends Thread {
             cleanup();
         }
     }
+<<<<<<< HEAD:Project/server/ServerThread.java
 
     void processPayload(Payload p) {
+=======
+//[nm874] 11/13/23
+    void processPayload(Payload p) throws IOException {
+        {
+        if (p.getPayloadType() == PayloadType.ROLL) {
+            // Handle roll command
+            int diceCount = p.getDiceCount();
+            int diceSides = p.getDiceSides();
+            Random random = new Random();
+            int total = 0;
+            
+            for (int i = 0; i < diceCount; i++) {
+                total += random.nextInt(diceSides) + 1;
+            }
+            Payload resultPayload = new Payload();
+            resultPayload.setPayloadType(PayloadType.MESSAGE);
+            resultPayload.setMessage("Roll result: " + total);
+            // Assuming out is the ObjectOutputStream for the client
+            out.writeObject(resultPayload);
+        } else if (p.getPayloadType() == PayloadType.FLIP) {
+            // Handle flip command
+            Random random = new Random();
+            String result = random.nextBoolean() ? "Heads" : "Tails";
+            Payload resultPayload = new Payload();
+            resultPayload.setPayloadType(PayloadType.MESSAGE);
+            resultPayload.setMessage("Flip result: " + result);
+            // Assuming out is the ObjectOutputStream for the client
+            out.writeObject(resultPayload);
+        }
+    
+        // Handling other payload types
+>>>>>>> main:Project1/Part6/ServerThread.java
         switch (p.getPayloadType()) {
             case CONNECT:
                 setClientName(p.getClientName());
