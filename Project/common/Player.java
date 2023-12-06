@@ -20,11 +20,11 @@ public class Player {
      */
     public void assignCharacter(Character character){
         if(this.character != null){
-            this.character.setController(null);
+          //  this.character.setController(null);
             this.character = null;
         }
         this.character = character;
-        this.character.setController(this);
+     //  this.character.setController(this);
     }
 
     public Character getCharacter(){

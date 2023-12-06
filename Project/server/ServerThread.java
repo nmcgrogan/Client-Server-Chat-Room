@@ -8,15 +8,11 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import Project.common.CellData;
-import Project.common.CellPayload;
-import Project.common.Character;
-import Project.common.CharacterPayload;
+
 import Project.common.Constants;
 import Project.common.Payload;
 import Project.common.PayloadType;
 import Project.common.Phase;
-import Project.common.PositionPayload;
 import Project.common.RoomResultPayload;
 
 /**
@@ -84,7 +80,7 @@ public class ServerThread extends Thread {
         cleanup();
     }
 
-    // send methods
+   /*  // send methods
     public boolean sendGridReset(){
         Payload p = new Payload();
         p.setPayloadType(PayloadType.GRID_RESET);
@@ -115,7 +111,7 @@ public class ServerThread extends Thread {
         cp.setClientId(clientId);
         return send(cp);
     }
-
+*/
     public boolean sendPhaseSync(Phase phase) {
         Payload p = new Payload();
         p.setPayloadType(PayloadType.PHASE);
@@ -258,40 +254,6 @@ public class ServerThread extends Thread {
                 break;
             case JOIN_ROOM:
                 Room.joinRoom(p.getMessage().trim(), this);
-                break;
-            case READY:
-                try {
-                    ((GameRoom) currentRoom).setReady(this);
-                } catch (Exception e) {
-                    logger.severe(String.format("There was a problem during readyCheck %s", e.getMessage()));
-                    e.printStackTrace();
-                }
-                break;
-            case CHARACTER:
-                try {
-                    CharacterPayload cp = (CharacterPayload) p;
-                    // Here I'm making the assumption if the passed Character is null, it's likely a
-                    // create request,
-                    // if the passed character is not null, then some of the properties will be used
-                    // for loading
-                    if (cp.getCharacter() == null) {
-                        ((GameRoom) currentRoom).createCharacter(this, cp.getCharacterType());
-                    } else {
-                        ((GameRoom) currentRoom).loadCharacter(this, cp.getCharacter());
-                    }
-                } catch (Exception e) {
-                    logger.severe(String.format("There was a problem during character handling %s", e.getMessage()));
-                    e.printStackTrace();
-                }
-                break;
-            case MOVE:
-                try {
-                    PositionPayload pp = (PositionPayload) p;
-                    ((GameRoom) currentRoom).handleMove(pp.getX(), pp.getY(), this);
-                } catch (Exception e) {
-                    logger.severe(String.format("There was a problem during position handling %s", e.getMessage()));
-                    e.printStackTrace();
-                }
                 break;
             default:
                 break;

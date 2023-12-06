@@ -8,16 +8,14 @@ import java.net.UnknownHostException;
 import java.util.Hashtable;
 import java.util.logging.Logger;
 
-import Project.common.CharacterPayload;
+
 import Project.common.Constants;
-import Project.common.Grid;
+
 import Project.common.Payload;
 import Project.common.PayloadType;
-import Project.common.PositionPayload;
+
 import Project.common.RoomResultPayload;
-import Project.common.Character.CharacterType;
-import Project.common.CellPayload;
-import Project.common.Character;
+
 
 public enum Client {
     INSTANCE;
@@ -37,7 +35,7 @@ public enum Client {
 
     private Hashtable<Long, ClientPlayer> userList = new Hashtable<Long, ClientPlayer>();
 
-    Grid clientGrid = new Grid();
+    //Grid clientGrid = new Grid();
 
     private static IClientEvents events;
 
@@ -84,7 +82,7 @@ public enum Client {
         return isConnected();
     }
 
-    // Send methods
+    /*  Send methods
     protected void sendMove(int x, int y) throws IOException {
         PositionPayload pp = new PositionPayload();
         pp.setCoord(x, y);
@@ -104,7 +102,7 @@ public enum Client {
         cp.setCharacterType(characterType);
         out.writeObject(cp);
     }
-
+*/
     protected void sendReadyStatus() throws IOException {
         Payload p = new Payload();
         p.setPayloadType(PayloadType.READY);
@@ -271,60 +269,8 @@ public enum Client {
             case PHASE:
                 System.out.println(String.format("The current phase is %s", p.getMessage()));
                 break;
-            case CHARACTER:
-                CharacterPayload cp = (CharacterPayload) p;
-                System.out.println("Created Character");
-                Character character = cp.getCharacter();
-
-                if (userList.containsKey(cp.getClientId())) {
-                    logger.info("Assigning character to " + cp.getClientId());
-                    userList.get(cp.getClientId()).assignCharacter(character);
-                }
-                if (cp.getClientId() == myClientId) {
-                    // myPlayer.assignCharacter(character);
-                    StringBuilder sb = new StringBuilder();
-                    sb.append("Character created: ").append(character.getName()).append("\n");
-                    sb.append("Character level: ").append(character.getLevel()).append("\n");
-                    sb.append("Character type: ").append(character.getType()).append("\n");
-                    sb.append("Character action type: ").append(character.getActionType()).append("\n");
-                    sb.append("Character stats: ").append("\n");
-                    sb.append("Attack: ").append(character.getAttack()).append("\n");
-                    sb.append("Vitality: ").append(character.getVitality()).append("\n");
-                    sb.append("Defense: ").append(character.getDefense()).append("\n");
-                    sb.append("Will: ").append(character.getWill()).append("\n");
-                    sb.append("Luck: ").append(character.getLuck()).append("\n");
-                    sb.append("Progression Rate: ").append(character.getProgressionRate()).append("\n");
-                    sb.append("Range: ").append(character.getRange()).append("\n");
-                    System.out.println(sb.toString());
-                }
-                break;
             case TURN:
                 System.out.println(String.format("Current Player: %s", getClientNameById(p.getClientId())));
-                break;
-            case GRID:
-                try {
-                    PositionPayload pp = (PositionPayload) p;
-                    clientGrid.buildBasic(pp.getX(), pp.getY());
-                    clientGrid.print();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-                break;
-            case CELL:
-                try {
-                    CellPayload cellPayload = (CellPayload) p;
-                    clientGrid.update(cellPayload.getCellData(), userList);
-                    clientGrid.print();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-                break;
-            case GRID_RESET:
-                if (clientGrid != null) {
-                    clientGrid.reset();
-                    System.out.println("Grid Reset");
-                    clientGrid.print();
-                }
                 break;
             default:
                 logger.warning(String.format("Unhandled Payload type: %s", p.getPayloadType()));
