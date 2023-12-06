@@ -1,4 +1,3 @@
-
 package Project.client;
 
 public interface IClientEvents {

@@ -3,11 +3,14 @@ package Project.client.views;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.event.ContainerEvent;
 import java.awt.event.ContainerListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.io.IOException;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.swing.BorderFactory;
@@ -17,7 +20,6 @@ import javax.swing.JEditorPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
-import javax.swing.JSplitPane;
 import javax.swing.JTextField;
 import javax.swing.ScrollPaneConstants;
 
@@ -33,10 +35,8 @@ public class ChatPanel extends JPanel {
 
     public ChatPanel(ICardControls controls) {
         super(new BorderLayout(10, 10));
-
         JPanel wrapper = new JPanel();
         wrapper.setLayout(new BoxLayout(wrapper, BoxLayout.Y_AXIS));
-
         JPanel content = new JPanel();
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
         content.setAlignmentY(Component.BOTTOM_ALIGNMENT);
@@ -48,6 +48,7 @@ public class ChatPanel extends JPanel {
         scroll.setBorder(BorderFactory.createEmptyBorder());
         // no need to add content specifically because scroll wraps it
         wrapper.add(scroll);
+        this.add(wrapper, BorderLayout.CENTER);
 
         JPanel input = new JPanel();
         input.setLayout(new BoxLayout(input, BoxLayout.X_AXIS));
@@ -81,26 +82,25 @@ public class ChatPanel extends JPanel {
                 if (text.length() > 0) {
                     Client.INSTANCE.sendMessage(text);
                     textValue.setText("");// clear the original text
+
+                    // debugging
+                    logger.log(Level.FINEST, "Content: " + content.getSize());
+                    logger.log(Level.FINEST, "Parent: " + this.getSize());
+
                 }
             } catch (NullPointerException e) {
             } catch (IOException e1) {
+                // TODO Auto-generated catch block
                 e1.printStackTrace();
             }
         });
         chatArea = content;
         input.add(button);
         userListPanel = new UserListPanel(controls);
-
-        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, wrapper, userListPanel);
-        splitPane.setResizeWeight(.7);
-        splitPane.setOneTouchExpandable(false); // This disables the one-touch expandable buttons
-        splitPane.setEnabled(false); // This makes the divider non-movable
-        this.add(splitPane, BorderLayout.CENTER);
+        this.add(userListPanel, BorderLayout.EAST);
         this.add(input, BorderLayout.SOUTH);
         this.setName(Card.CHAT.name());
-        // don't need to add this to ClientUI as this isn't a primary panel anymore
-        // (it's nested in ChatGamePanel)
-        // controls.addPanel(Card.CHAT.name(), this);
+        controls.addPanel(Card.CHAT.name(), this);
         chatArea.addContainerListener(new ContainerListener() {
 
             @Override
@@ -121,6 +121,25 @@ public class ChatPanel extends JPanel {
             }
 
         });
+        this.addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                // System.out.println("Resized to " + e.getComponent().getSize());
+                // rough concepts for handling resize
+                // set the dimensions based on the frame size
+                Dimension frameSize = wrapper.getParent().getParent().getSize();
+                int w = (int) Math.ceil(frameSize.getWidth() * .3f);
+
+                userListPanel.setPreferredSize(new Dimension(w, (int) frameSize.getHeight()));
+                userListPanel.revalidate();
+                userListPanel.repaint();
+            }
+
+            @Override
+            public void componentMoved(ComponentEvent e) {
+                // System.out.println("Moved to " + e.getComponent().getLocation());
+            }
+        });
     }
 
     public void addUserListItem(long clientId, String clientName) {
@@ -136,7 +155,6 @@ public class ChatPanel extends JPanel {
     }
 
     public void addText(String text) {
-        logger.info("Adding Text: " + text);
         JPanel content = chatArea;
         // add message
         JEditorPane textContainer = new JEditorPane("text/plain", text);

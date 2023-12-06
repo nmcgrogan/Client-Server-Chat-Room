@@ -76,7 +76,7 @@ public class ClientUI extends JFrame implements IClientEvents, ICardControls {
         inputPanel = new UserInputPanel(this);
         chatPanel = new ChatPanel(this);
 
-        roomsPanel = new RoomsPanel(this);
+       roomsPanel = new RoomsPanel(this);
 
         // https://stackoverflow.com/a/9093526
         // this tells the x button what to do (updated to be controlled via a prompt)
@@ -240,7 +240,7 @@ public class ClientUI extends JFrame implements IClientEvents, ICardControls {
     }
 
     @Override
-    public void onReceiveRoomList(String[] rooms, String message) {
+   public void onReceiveRoomList(String[] rooms, String message) {
         roomsPanel.removeAllRooms();
         if (message != null && message.length() > 0) {
             roomsPanel.setMessage(message);
@@ -251,8 +251,7 @@ public class ClientUI extends JFrame implements IClientEvents, ICardControls {
             }
         }
     }
-
-    @Override
+    @Override 
     public void onRoomJoin(String roomName) {
         if (currentCard.ordinal() >= Card.CHAT.ordinal()) {
             chatPanel.addText("Joined room " + roomName);

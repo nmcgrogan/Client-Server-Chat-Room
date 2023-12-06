@@ -117,28 +117,28 @@ public class RoomsPanel extends JPanel {
         this.add(search, BorderLayout.NORTH);
         this.add(back, BorderLayout.SOUTH);
         this.add(container, BorderLayout.CENTER);
-        container.addContainerListener(new ContainerListener() {
+       /// container.addContainerListener(new ContainerListener() {
 
-            @Override
-            public void componentAdded(ContainerEvent e) {
+          //  @Override
+         //   public void componentAdded(ContainerEvent e) {
                 if (container.isVisible()) {
-                    revalidate();
-                    repaint();
+            //        revalidate();
+             //       repaint();
                 }
+         //   }
+
+         //   @Override
+           // public void componentRemoved(ContainerEvent e) {
+                //if (container.isVisible()) {
+                //   revalidate();
+                //    repaint();
+               /// }
             }
 
-            @Override
-            public void componentRemoved(ContainerEvent e) {
-                if (container.isVisible()) {
-                    revalidate();
-                    repaint();
-                }
-            }
-
-        });
-        this.setName(Card.ROOMS.name());
-        controls.addPanel(Card.ROOMS.name(), this);
-    }
+        //});
+      //  this.setName(Card.ROOMS.name());
+     //   controls.addPanel(Card.ROOMS.name(), this);
+  //  }
 
     public void setMessage(String message) {
         this.message.setText(message);
