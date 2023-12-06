@@ -1,4 +1,4 @@
-
+<<<<<<<<< Temporary merge branch 1
 <table><tr><td> <em>Assignment: </em> IT114 Chatroom Milestone 2</td></tr>
 <tr><td> <em>Student: </em> Nicolas McGrogan (nm874)</td></tr>
 <tr><td> <em>Generated: </em> 11/13/2023 11:48:49 PM</td></tr>
@@ -49,7 +49,7 @@
 <tr><td> <a rel="noreferrer noopener" target="_blank" href="https://github.com/nmcgrogan/nm874-it114-003/pull/11">https://github.com/nmcgrogan/nm874-it114-003/pull/11</a> </td></tr>
 </table></td></tr>
 <table><tr><td><em>Grading Link: </em><a rel="noreferrer noopener" href="https://learn.ethereallab.app/homework/IT114-003-F23/it114-chatroom-milestone-2/grade/nm874" target="_blank">Grading</a></td></tr></table>
-
+=========
 <table><tr><td> <em>Assignment: </em> IT114 Chatroom Milestone 2</td></tr>
 <tr><td> <em>Student: </em> Nicolas McGrogan (nm874)</td></tr>
 <tr><td> <em>Generated: </em> 11/13/2023 11:48:49 PM</td></tr>
