@@ -8,14 +8,10 @@ import java.net.UnknownHostException;
 import java.util.Hashtable;
 import java.util.logging.Logger;
 
-
 import Project.common.Constants;
-
 import Project.common.Payload;
 import Project.common.PayloadType;
-
 import Project.common.RoomResultPayload;
-
 
 public enum Client {
     INSTANCE;
@@ -34,12 +30,95 @@ public enum Client {
     private static Logger logger = Logger.getLogger(Client.class.getName());
 
     private Hashtable<Long, ClientPlayer> userList = new Hashtable<Long, ClientPlayer>();
-
     //Grid clientGrid = new Grid();
 
     private static IClientEvents events;
+    /*nm874
+     * 12/8/23
+     */
+    private void sendWhisperPayload(String text) throws IOException {
+        // Assume the format of the whisper command is "/whisper username message"
+        String[] parts = text.split(" ", 3);
+        if (parts.length >= 3) {
+            String username = parts[1];
+            String message = parts[2];
+            Payload p = new Payload();
+            p.setPayloadType(PayloadType.WHISPER); // You need to define this type in PayloadType enum
+            p.setClientName(username); // Set the recipient's username
+            p.setMessage(message); // Set the actual message
+            out.writeObject(p); // Send the payload
+        } else {
+            // Handle error: command format is incorrect
+        }
+    }
+    
+    private void sendMutePayload(String text) throws IOException {
+        // Assume the format of the mute command is "/mute username"
+        String[] parts = text.split(" ", 2);
+        if (parts.length == 2) {
+            String username = parts[1];
+            Payload p = new Payload();
+            p.setPayloadType(PayloadType.MUTE); // You need to define this type in PayloadType enum
+            p.setMessage(username); // Set the username to be muted
+            out.writeObject(p); // Send the payload
+        } else {
+            // Handle error: command format is incorrect
+        }
+    }
+    
+    private void sendUnmutePayload(String text) throws IOException {
+        // Assume the format of the unmute command is "/unmute username"
+        String[] parts = text.split(" ", 2);
+        if (parts.length == 2) {
+            String username = parts[1];
+            Payload p = new Payload();
+            p.setPayloadType(PayloadType.UNMUTE); // You need to define this type in PayloadType enum
+            p.setMessage(username); // Set the username to be unmuted
+            out.writeObject(p); // Send the payload
+        } else {
+            // Handle error: command format is incorrect
+        }
+    }
+    private void sendRollPayload(String text) throws IOException {
+        Payload p = new Payload();
+        p.setPayloadType(PayloadType.ROLL);
+        
+        // Extracting dice count and sides from the command
+        if (text.matches("/roll \\d+d\\d+")) {
+            String[] parts = text.substring(6).split("d");
+            int diceCount = Integer.parseInt(parts[0]);
+            int diceSides = Integer.parseInt(parts[1]);
+            p.setDiceCount(diceCount);
+            p.setDiceSides(diceSides);
+        }
+        
+        out.writeObject(p);
+    }
 
-    public boolean isConnected() {
+    // Method to send a flip command payload
+    private void sendFlipPayload() throws IOException {
+        Payload p = new Payload();
+        p.setPayloadType(PayloadType.FLIP);
+        out.writeObject(p);
+    }
+/*nm874
+     * 12/8/23
+     */
+    // Method to process client commands
+    public void processClientCommand(String text) throws IOException {
+        if (text.startsWith("/roll")) {
+            sendRollPayload(text);
+        } else if (text.equals("/flip")) {
+            sendFlipPayload();
+        } else if (text.startsWith("/whisper")) {
+            sendWhisperPayload(text);
+        } else if (text.startsWith("/mute")) {
+            sendMutePayload(text);
+        } else if (text.startsWith("/unmute")) {
+            sendUnmutePayload(text);
+        }
+        }
+        public boolean isConnected() {
         if (server == null) {
             return false;
         }
@@ -139,13 +218,14 @@ public enum Client {
     protected void sendConnect() throws IOException {
         Payload p = new Payload();
         p.setPayloadType(PayloadType.CONNECT);
-        p.setClientName(myPlayer.getClientName());
+        p.setClientName(myPlayer.getClientName()); // Set the client's name
         out.writeObject(p);
     }
 
     public void sendMessage(String message) throws IOException {
         Payload p = new Payload();
         p.setPayloadType(PayloadType.MESSAGE);
+    
         p.setMessage(message);
         p.setClientName(myPlayer.getClientName());
         out.writeObject(p);
@@ -190,7 +270,6 @@ public enum Client {
         }
         return "unkown user";
     }
-
     /**
      * Processes incoming payloads from ServerThread
      * 

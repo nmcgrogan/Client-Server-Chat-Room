@@ -7,10 +7,11 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 import java.util.logging.Logger;
-
 import Project.common.Constants;
+import java.util.concurrent.ConcurrentHashMap;
 
 public enum Server {
     INSTANCE;
@@ -20,6 +21,12 @@ public enum Server {
     private List<Room> rooms = new ArrayList<Room>();
     private Room lobby = null;// default room
     private long nextClientId = 1;
+    public TextStyling styler = new TextStyling();
+    
+    public Long getClientIdByUsername(String username) {
+        return usernameToClientIdMap.get(username);
+    }
+    private Map<String, Long> usernameToClientIdMap = new ConcurrentHashMap<>();
 
     private Queue<ServerThread> incomingClients = new LinkedList<ServerThread>();
     // https://www.geeksforgeeks.org/killing-threads-in-java/
@@ -215,8 +222,22 @@ public enum Server {
     }
 
     private boolean processCommand(String message) {
-        System.out.println("Checking command: " + message);
-        // TODO
+        if (message.startsWith("/roll")) {
+            // You may handle the roll command here if needed
+            return true;
+        } else if (message.equalsIgnoreCase("/flip")) {
+            // You may handle the flip command here if needed
+            return true;
+        } else if (message.equalsIgnoreCase("/whisper")) {
+            // You may handle the flip command here if needed
+            return true;
+        } else if (message.equalsIgnoreCase("/mute")) {
+            // You may handle the flip command here if needed
+            return true;
+        } else if (message.equalsIgnoreCase("/unmute")) {
+            // You may handle the flip command here if needed
+            return true;
+        }
         return false;
     }
 

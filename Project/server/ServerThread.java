@@ -4,17 +4,19 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
-import java.util.List;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
 
 import Project.common.Constants;
 import Project.common.Payload;
 import Project.common.PayloadType;
 import Project.common.Phase;
 import Project.common.RoomResultPayload;
-
 /**
  * A server-side representation of a single client
  */
@@ -23,11 +25,28 @@ public class ServerThread extends Thread {
     private String clientName;
     private boolean isRunning = false;
     private ObjectOutputStream out;// exposed here for send()
-    // private Server server;// ref to our server so we can call methods on it
+     private Server server;// ref to our server so we can call methods on it
     // more easily
     private Room currentRoom;
     private static Logger logger = Logger.getLogger(ServerThread.class.getName());
     private long myClientId;
+    private TextStyling textStyling = new TextStyling();
+    private Set<Long> mutedClients = new HashSet<>();
+    private Map<Long, String> clientIdToUsername = new HashMap<>();
+   
+    public Set<Long> getMutedClients() {
+        return new HashSet<>(mutedClients);
+    }
+
+    // Setter for mutedClients
+    public void muteClient(Long clientId) {
+        mutedClients.add(clientId);
+    }
+
+    public void unmuteClient(Long clientId) {
+        mutedClients.remove(clientId);
+    }
+    
 
     public void setClientId(long id) {
         myClientId = id;
@@ -55,7 +74,8 @@ public class ServerThread extends Thread {
             return;
         }
         clientName = name;
-    }
+    clientIdToUsername.put(myClientId, name);
+}
 
     public String getClientName() {
         return clientName;
@@ -167,10 +187,17 @@ public class ServerThread extends Thread {
         Payload p = new Payload();
         p.setPayloadType(PayloadType.MESSAGE);
         p.setClientId(clientId);
+        if (mutedClients.contains(clientId)) {
+            // Skip sending if the recipient has muted the sender
+            return false;
+        }
+            // Process the message for styling
+        message = textStyling.processAllStyles(message);
+
         p.setMessage(message);
         return send(p);
-    }
-
+        }
+    
     public boolean sendConnectionStatus(long clientId, String who, boolean isConnected) {
         Payload p = new Payload();
         p.setPayloadType(isConnected ? PayloadType.CONNECT : PayloadType.DISCONNECT);
@@ -189,15 +216,13 @@ public class ServerThread extends Thread {
             return true;
         } catch (IOException e) {
             logger.info("Error sending message to client (most likely disconnected)");
-            // uncomment this to inspect the stack trace
-            // e.printStackTrace();
+            e.printStackTrace(); // or handle the exception appropriately
             cleanup();
             return false;
         } catch (NullPointerException ne) {
             logger.info("Message was attempted to be sent before outbound stream was opened: " + payload);
-            // uncomment this to inspect the stack trace
-            // e.printStackTrace();
-            return true;// true since it's likely pending being opened
+            ne.printStackTrace(); // or handle the exception appropriately
+            return false; // false since the client might not have been ready
         }
     }
 
@@ -228,9 +253,28 @@ public class ServerThread extends Thread {
             cleanup();
         }
     }
-
+/*Nm874
+ * 12/7/23
+ */
     void processPayload(Payload p) {
+        // Handling different payload types
         switch (p.getPayloadType()) {
+            case WHISPER:
+            processWhisperCommand(p.getMessage(), p.getClientId());
+            break;
+            case MUTE:
+                updateMuteList(p.getMessage(), p.getClientId(), true);
+                break;
+            case UNMUTE:
+                updateMuteList(p.getMessage(), p.getClientId(), false);
+                break;
+            case ROLL:
+                // Extract command and clientId from Payload and process
+                processRollCommand(p.getMessage(), p.getClientId());
+                break;
+            case FLIP:
+                processFlipCommand(p.getClientId());
+                break;
             case CONNECT:
                 setClientName(p.getClientName());
                 break;
@@ -238,12 +282,17 @@ public class ServerThread extends Thread {
                 Room.disconnectClient(this, getCurrentRoom());
                 break;
             case MESSAGE:
-                if (currentRoom != null) {
-                    currentRoom.sendMessage(this, p.getMessage());
+                if (p.getMessage().startsWith("/")) {
+                    // Process as command
+                    processCommand(p.getMessage(), p.getClientId());
                 } else {
-                    // TODO migrate to lobby
-                    logger.log(Level.INFO, "Migrating to lobby on message with null room");
-                    Room.joinRoom(Constants.LOBBY, this);
+                    // Process as regular message
+                    if (currentRoom != null) {
+                        currentRoom.sendMessage(this, p.getMessage());
+                    } else {
+                        logger.log(Level.INFO, "Migrating to lobby on message with null room");
+                        Room.joinRoom(Constants.LOBBY, this);
+                    }
                 }
                 break;
             case GET_ROOMS:
@@ -255,20 +304,141 @@ public class ServerThread extends Thread {
             case JOIN_ROOM:
                 Room.joinRoom(p.getMessage().trim(), this);
                 break;
+            case READY:
+                // Additional case logic here
+                break;
             default:
                 break;
-
         }
-
     }
-
-    private void cleanup() {
-        logger.info("Thread cleanup() start");
-        try {
-            client.close();
-        } catch (IOException e) {
-            logger.info("Client already closed");
+    /*Nm874
+ * 12/7/23
+ */
+private void processCommand(String command, long clientId) {
+        if (command.startsWith("@")) {
+            processWhisperCommand(command, clientId);
+        } else if (command.toLowerCase().startsWith("/mute ")) {
+            updateMuteList(command, clientId, true);
+        } else if (command.toLowerCase().startsWith("/unmute ")) {
+            updateMuteList(command, clientId, false);
         }
-        logger.info("Thread cleanup() complete");
+    if (command.equalsIgnoreCase("/flip")) {
+        processFlipCommand(clientId);
+    }
+    else if (command.startsWith("/roll")) {
+        processRollCommand(command, clientId);}
+}
+private void processWhisperCommand(String message, long clientId) {
+    // Assuming the message format is "/whisper username message"
+    String[] parts = message.split(" ", 3);
+    if (parts.length >= 3 && parts[0].equalsIgnoreCase("/whisper")) {
+        String targetUsername = parts[1];
+        String whisperMessage = parts[2];
+        Long recipientClientId = findClientIdByUsername(targetUsername);
+        if (recipientClientId != null) {
+            sendMessage(recipientClientId, "[Whisper from " + getClientNameById(clientId) + "]: " + whisperMessage);
+            sendMessage(clientId, "[You whisper to " + targetUsername + "]: " + whisperMessage);
+        } else {
+            sendMessage(clientId, "User " + targetUsername + " not found.");
+        }
     }
 }
+
+private void updateMuteList(String command, long clientId, boolean mute) {
+    // Assuming the command format is "/mute username" or "/unmute username"
+    String[] parts = command.split(" ", 2);
+    if (parts.length == 2) {
+        String targetUsername = parts[1].trim();
+        Long targetClientId = findClientIdByUsername(targetUsername);
+        if (targetClientId != null) {
+            if (mute) {
+                mutedClients.add(targetClientId);
+                sendMessage(clientId, "You have muted " + targetUsername + ".");
+            } else {
+                mutedClients.remove(targetClientId);
+                sendMessage(clientId, "You have unmuted " + targetUsername + ".");
+            }
+        } else {
+            sendMessage(clientId, "User " + targetUsername + " not found.");
+        }
+    } else {
+        sendMessage(clientId, "Invalid command format.");
+    }
+}
+
+private Long findClientIdByUsername(String username) {
+    // Iterate through all clients to find the matching username
+    for (ServerThread client : getCurrentRoom().getClients()) {
+        if (client.getClientName().equalsIgnoreCase(username)) {
+            return client.getClientId();
+        }
+    }
+    return null;
+}
+protected String getClientNameById(long id) {
+    // Check if the user list has the client ID.
+    if (clientIdToUsername.containsKey(id)) {
+        // If it does, return the client's name.
+        return clientIdToUsername.get(id);
+    }
+    // If the ID is the default, it means the server is the sender.
+    if (id == Constants.DEFAULT_CLIENT_ID) {
+        return "[Server]";
+    }
+    // If the client ID was not found, return an indicator such as "Unknown User."
+    return "[Unknown User]";
+}
+
+
+private void processRollCommand(String command, long clientId) {
+    String[] parts = command.split(" ");
+    if (parts.length > 1) {
+        // Assuming the format is /roll 2d6 or /roll 10
+        String rollParams = parts[1];
+        sendMessage(clientId, "Roll result: " + performRoll(rollParams));
+    } else {
+        // Handle error or default case
+        sendMessage(clientId, "Invalid roll command format.");
+    }
+}
+ /*Nm874
+ * 12/7/23
+ */
+private void processFlipCommand(long clientId) {
+    Random random = new Random();
+    String result = random.nextBoolean() ? "Heads" : "Tails";
+    String response = "Flip result: " + result;
+    sendMessage(clientId, response);
+}
+
+private String performRoll(String rollParams) {
+    Random random = new Random();
+    int total = 0;
+    if (rollParams.matches("\\d+")) {
+        // Single number roll, e.g., /roll 20
+        int max = Integer.parseInt(rollParams);
+        total = random.nextInt(max) + 1;
+    } else if (rollParams.matches("\\d+d\\d+")) {
+        // Dice roll, e.g., /roll 2d6
+        String[] diceParts = rollParams.split("d");
+        int diceCount = Integer.parseInt(diceParts[0]);
+        int diceSides = Integer.parseInt(diceParts[1]);
+        for (int i = 0; i < diceCount; i++) {
+            total += random.nextInt(diceSides) + 1;
+        }
+    } else {
+        // Invalid format
+        return "Invalid roll command.";
+    }
+    return String.valueOf(total);
+}
+
+private void cleanup() {
+    logger.info("Thread cleanup() start");
+    try {
+        client.close();
+    } catch (IOException e) {
+        logger.info("Client already closed");
+    }
+    logger.info("Thread cleanup() complete");
+}}
