@@ -343,7 +343,9 @@ private void processWhisperCommand(String message, long clientId) {
         }
     }
 }
-
+ /*Nm874
+ * 12/7/23
+ */
 private void updateMuteList(String command, long clientId, boolean mute) {
     // Assuming the command format is "/mute username" or "/unmute username"
     String[] parts = command.split(" ", 2);
