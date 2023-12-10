@@ -3,8 +3,8 @@ package Project.client.views;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
-import java.awt.event.ContainerEvent;
-import java.awt.event.ContainerListener;
+//import java.awt.event.ContainerEvent;
+//import java.awt.event.ContainerListener;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -20,7 +20,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.ScrollPaneConstants;
 
-import Project.client.Card;
+//import Project.client.Card;
 import Project.client.Client;
 import Project.client.ICardControls;
 

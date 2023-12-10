@@ -1,8 +1,12 @@
 package Project.server;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.logging.Logger;
 
 import Project.common.Constants;
@@ -21,6 +25,8 @@ public class Room implements AutoCloseable {
     private final static String LOGOUT = "logout";
     private final static String LOGOFF = "logoff";
     private static Logger logger = Logger.getLogger(Room.class.getName());
+    private Map<Long, Set<Long>> clientMutes = new HashMap<>();
+
 
     public Room(String name) {
         this.name = name;
@@ -30,7 +36,9 @@ public class Room implements AutoCloseable {
     public String getName() {
         return name;
     }
-
+    public List<ServerThread> getClients() {
+        return new ArrayList<>(clients);
+    }
     public boolean isRunning() {
         return isRunning;
     }
@@ -186,20 +194,67 @@ public class Room implements AutoCloseable {
             return;
         }
         logger.info(String.format("Sending message to %s clients", clients.size()));
+        if (message.startsWith("@")) {
+            processWhisper(sender, message);
+            return;
+        }
         if (sender != null && processCommands(message, sender)) {
             // it was a command, don't broadcast
             return;
         }
-        long from = sender == null ? Constants.DEFAULT_CLIENT_ID : sender.getClientId();
-        Iterator<ServerThread> iter = clients.iterator();
-        while (iter.hasNext()) {
-            ServerThread client = iter.next();
-            boolean messageSent = client.sendMessage(from, message);
-            if (!messageSent) {
-                handleDisconnect(iter, client);
-            }
+    
+        // Apply styling to the message
+        // Apply styling to the message
+    String styledMessage = Server.INSTANCE.styler.processAllStyles(message);
+    long from = sender == null ? Constants.DEFAULT_CLIENT_ID : sender.getClientId();
+    Iterator<ServerThread> iter = clients.iterator();
+    while (iter.hasNext()) {
+        ServerThread client = iter.next();
+        if (clientMutes.getOrDefault(client.getClientId(), new HashSet<>()).contains(from)) {
+            // If the sender is muted by the client, don't send the message
+            continue;
+        }
+        // Send the styled message to each client
+        boolean messageSent = client.sendMessage(from, styledMessage);
+        if (!messageSent) {
+            // If the message fails to send, handle the disconnect
+            handleDisconnect(iter, client);
         }
     }
+}
+    private void processWhisper(ServerThread sender, String message) {
+    // Assuming message format is "@username the actual message"
+    String[] parts = message.split(" ", 2);
+    if (parts.length == 2) {
+        String targetUsername = parts[0].substring(1); // Remove '@' from username
+        String whisperMessage = parts[1];
+        ServerThread recipient = findClientByUsername(targetUsername);
+        if (recipient != null) {
+            sender.sendMessage(recipient.getClientId(), "[Whisper]: " + whisperMessage);
+            recipient.sendMessage(sender.getClientId(), "[Whisper from " + sender.getClientName() + "]: " + whisperMessage);
+        } else {
+            sender.sendMessage(Constants.DEFAULT_CLIENT_ID, "User @" + targetUsername + " not found.");
+        }
+    }
+}
+
+private ServerThread findClientByUsername(String username) {
+    for (ServerThread client : clients) {
+        if (client.getClientName().equalsIgnoreCase(username)) {
+            return client;
+        }
+    }
+    return null;
+}
+protected String getClientNameById(long clientId) {
+    for (ServerThread client : clients) {
+        if (client.getClientId() == clientId) {
+            return client.getClientName();
+        }
+    }
+    // If the client ID doesn't correspond to a connected client, return an indicator
+    return "[Unknown User]";
+}
 
     protected synchronized void sendConnectionStatus(ServerThread sender, boolean isConnected) {
         Iterator<ServerThread> iter = clients.iterator();

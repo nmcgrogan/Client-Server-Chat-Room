@@ -11,6 +11,26 @@ public class Payload implements Serializable {
      * [nm874] 11/13/23
      */
     private PayloadType payloadType;
+    private int diceCount;
+    private int diceSides;
+
+    // Getters and setters for diceCount
+    public int getDiceCount() {
+        return diceCount;
+    }
+
+    public void setDiceCount(int diceCount) {
+        this.diceCount = diceCount;
+    }
+
+    // Getters and setters for diceSides
+    public int getDiceSides() {
+        return diceSides;
+    }
+
+    public void setDiceSides(int diceSides) {
+        this.diceSides = diceSides;
+    }
 
     public PayloadType getPayloadType() {
         return payloadType;

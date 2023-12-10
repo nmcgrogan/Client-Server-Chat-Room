@@ -153,11 +153,13 @@ public class ChatPanel extends JPanel {
     public void clearUserList() {
         userListPanel.clearUserList();
     }
-
+ /*Nm874
+ * 12/7/23
+ */
     public void addText(String text) {
         JPanel content = chatArea;
         // add message
-        JEditorPane textContainer = new JEditorPane("text/plain", text);
+        JEditorPane textContainer = new JEditorPane("text/html", text);
 
         // sizes the panel to attempt to take up the width of the container
         // and expand in height based on word wrapping
@@ -172,5 +174,20 @@ public class ChatPanel extends JPanel {
         // scroll down on new message
         JScrollBar vertical = ((JScrollPane) chatArea.getParent().getParent()).getVerticalScrollBar();
         vertical.setValue(vertical.getMaximum());
+    }
+
+    public String processAllStyles(String text) {
+          // Process underline
+        text = text.replaceAll("__(.*?)__", "<u>$1</u>");
+        // Process bold
+        text = text.replaceAll("\\*\\*(.*)\\*\\*", "<b>$1</b>");
+
+        // Process italics
+        text = text.replaceAll("_(.*)_", "<i>$1</i>");
+    
+        // Process colored text
+        text = text.replaceAll("\\{color:(#\\w{6})\\}(.*?)\\{color\\}", "<span style='color:$1;'>$2</span>");
+    
+        return text;
     }
 }
