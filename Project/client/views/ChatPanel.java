@@ -9,7 +9,11 @@ import java.awt.event.ContainerEvent;
 import java.awt.event.ContainerListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -17,6 +21,7 @@ import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JEditorPane;
+import javax.swing.JFileChooser;
 import javax.swing.JPanel;
 import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
@@ -32,6 +37,8 @@ public class ChatPanel extends JPanel {
     private static Logger logger = Logger.getLogger(ChatPanel.class.getName());
     private JPanel chatArea = null;
     private UserListPanel userListPanel;
+    private ArrayList<String> chatHistory = new ArrayList<>(); // Chat history storage
+
 
     public ChatPanel(ICardControls controls) {
         super(new BorderLayout(10, 10));
@@ -40,7 +47,8 @@ public class ChatPanel extends JPanel {
         JPanel content = new JPanel();
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
         content.setAlignmentY(Component.BOTTOM_ALIGNMENT);
-
+         // Load chat history when the panel is created
+         loadChatHistory();
         // wraps a viewport to provide scroll capabilities
         JScrollPane scroll = new JScrollPane(content);
         scroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
@@ -55,6 +63,9 @@ public class ChatPanel extends JPanel {
         JTextField textValue = new JTextField();
         input.add(textValue);
         JButton button = new JButton("Send");
+        JButton exportButton = new JButton("Export Chat");
+exportButton.addActionListener(event -> exportChatHistory());
+input.add(exportButton);
         // lets us submit with the enter key instead of just the button click
         textValue.addKeyListener(new KeyListener() {
 
@@ -159,6 +170,7 @@ public class ChatPanel extends JPanel {
     public void addText(String text) {
         JPanel content = chatArea;
         // add message
+        
         JEditorPane textContainer = new JEditorPane("text/html", text);
 
         // sizes the panel to attempt to take up the width of the container
@@ -172,6 +184,62 @@ public class ChatPanel extends JPanel {
         // add to container and tell the layout to revalidate
         content.add(textContainer);
         // scroll down on new message
+        JScrollBar vertical = ((JScrollPane) chatArea.getParent().getParent()).getVerticalScrollBar();
+        vertical.setValue(vertical.getMaximum());
+        logger.log(Level.INFO, "Adding message to history: " + text);
+        chatHistory.add(text);
+    }
+    private void loadChatHistory() {
+        for (String message : chatHistory) {
+            addTextToPanel(message);
+        }
+    }
+    private void exportChatHistory() {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Save Chat History");
+        int userSelection = fileChooser.showSaveDialog(this);
+        if (userSelection == JFileChooser.APPROVE_OPTION) {
+            File fileToSave = fileChooser.getSelectedFile();
+            // Call a method to save the chat history to the selected file
+            saveChatToFile(fileToSave, chatHistory);
+        }
+    }
+    
+    private void saveChatToFile(File file, ArrayList<String> chatHistory) {
+        if (chatHistory.isEmpty()) {
+            logger.log(Level.WARNING, "Chat history is empty, nothing to save.");
+            return;
+        }
+        
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+            for (String message : chatHistory) {
+                writer.write(message);
+                writer.newLine(); // Ensure each message is on a new line
+            }
+            logger.log(Level.INFO, "Chat history saved successfully to " + file.getAbsolutePath());
+        } catch (IOException e) {
+            logger.log(Level.SEVERE, "Failed to save chat history", e);
+            // Notify the user that saving failed, if your application has a GUI alert/notification system
+        }
+    }
+    private void addTextToPanel(String text) {
+        JEditorPane textContainer = new JEditorPane();
+        textContainer.setContentType("text/html");
+        textContainer.setText(text);
+        textContainer.setEditable(false);
+        ClientUtils.clearBackground(textContainer);
+    
+        // Ensure the component sizes itself properly
+        textContainer.setSize(chatArea.getWidth(), Short.MAX_VALUE);
+        Dimension prefSize = textContainer.getPreferredSize();
+        textContainer.setPreferredSize(new Dimension(chatArea.getWidth(), prefSize.height));
+        textContainer.setMaximumSize(prefSize);
+    
+        chatArea.add(textContainer);
+    
+        // Scroll down to the new message
+        chatArea.revalidate();
+        chatArea.repaint();
         JScrollBar vertical = ((JScrollPane) chatArea.getParent().getParent()).getVerticalScrollBar();
         vertical.setValue(vertical.getMaximum());
     }
