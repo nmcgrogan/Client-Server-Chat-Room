@@ -1,9 +1,14 @@
 package Project.server;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -11,6 +16,8 @@ import java.util.Random;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+//import java.util.prefs.Preferences;
+import java.util.stream.Collectors;
 
 import Project.common.Constants;
 import Project.common.Payload;
@@ -25,27 +32,99 @@ public class ServerThread extends Thread {
     private String clientName;
     private boolean isRunning = false;
     private ObjectOutputStream out;// exposed here for send()
-     private Server server;// ref to our server so we can call methods on it
+     //private Server server;// ref to our server so we can call methods on it
     // more easily
     private Room currentRoom;
     private static Logger logger = Logger.getLogger(ServerThread.class.getName());
     private long myClientId;
     private TextStyling textStyling = new TextStyling();
-    private Set<Long> mutedClients = new HashSet<>();
     private Map<Long, String> clientIdToUsername = new HashMap<>();
-   
+    private Set<Long> mutedClients = new HashSet<>();
+    private static final String MUTE_LIST_DIR = System.getProperty("user.home") + File.separator + "mute_lists";
+    
+    
+        private void saveMuteList() {
+            try {
+                // Create the directory if it doesn't exist
+                File muteListDir = new File(MUTE_LIST_DIR);
+                if (!muteListDir.exists()) {
+                    muteListDir.mkdirs();
+                    logger.info("Mute list directory created: " + muteListDir.getAbsolutePath());
+                }
+        
+                // Specify the path for the mute list file
+                String muteListFilePath = MUTE_LIST_DIR + File.separator + clientName + "mute_list.txt";
+                logger.info("Generated mute list file path: " + muteListFilePath); // Logging the path
+        
+                // Create a mute list file
+                File muteFile = new File(muteListFilePath);
+        
+                // Prepare data to be written
+                String data = mutedClients.stream()
+                        .map(String::valueOf)
+                        .collect(Collectors.joining(","));
+                logger.info("Data to be written to mute list: " + data); // Logging the data
+        
+                // Use FileWriter to write data
+                try (FileWriter writer = new FileWriter(muteFile)) {
+                    writer.write(data);
+                    logger.info("Mute list data written to file: " + muteFile.getAbsolutePath());
+                }
+                logger.info("Mute list saved at: " + muteFile.getAbsolutePath());
+            } catch (IOException e) {
+                logger.log(Level.SEVERE, "Failed to save mute list", e);
+            } catch (Exception ex) {
+                logger.log(Level.SEVERE, "An error occurred while saving the mute list", ex);
+            }
+        }
+
+// Load mute list from file (when server starts)
+private void loadMuteList() {
+    try {
+        File muteFile = new File(MUTE_LIST_DIR, clientName + "mute_list.txt");
+        if (muteFile.exists()) {
+            mutedClients.clear();
+            try (BufferedReader reader = new BufferedReader(new FileReader(muteFile))) {
+                String data = reader.readLine();
+                if (data != null && !data.isEmpty()) {
+                    Arrays.stream(data.split(","))
+                    .map(String::trim)
+                        .map(Long::parseLong)
+                    .forEach(mutedClients::add);
+                }
+            }
+        }
+    } catch (IOException e) {
+        // Handle file I/O errors gracefully
+        e.printStackTrace();
+    }
+}
+    
+
     public Set<Long> getMutedClients() {
         return new HashSet<>(mutedClients);
     }
 
-    // Setter for mutedClients
-    public void muteClient(Long clientId) {
+  // Setter for mutedClients
+public void muteClient(Long clientId) {
+    try {
         mutedClients.add(clientId);
+        saveMuteList();
+    } catch (Exception e) {
+        // Handle the exception
+        e.printStackTrace();
     }
+}
 
-    public void unmuteClient(Long clientId) {
+public void unmuteClient(Long clientId) {
+    try {
         mutedClients.remove(clientId);
+        saveMuteList();
+    } catch (Exception e) {
+        // Handle the exception
+        e.printStackTrace();
     }
+}
     
 
     public void setClientId(long id) {
@@ -65,6 +144,7 @@ public class ServerThread extends Thread {
         // get communication channels to single client
         this.client = myClient;
         this.currentRoom = room;
+        loadMuteList();
 
     }
 
@@ -282,6 +362,7 @@ public class ServerThread extends Thread {
                 Room.disconnectClient(this, getCurrentRoom());
                 break;
             case MESSAGE:
+                // Add logging before the logic that handles messages
                 if (p.getMessage().startsWith("/")) {
                     // Process as command
                     processCommand(p.getMessage(), p.getClientId());
