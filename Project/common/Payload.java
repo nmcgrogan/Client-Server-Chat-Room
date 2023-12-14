@@ -1,6 +1,7 @@
 package Project.common;
 
 import java.io.Serializable;
+import java.util.Map;
 
 public class Payload implements Serializable {
     // read https://www.baeldung.com/java-serial-version-uid
@@ -13,7 +14,42 @@ public class Payload implements Serializable {
     private PayloadType payloadType;
     private int diceCount;
     private int diceSides;
+    private Map<Long, UserStatus> userStatuses;
+    public Map<Long, UserStatus> getUserStatuses() {
+        return userStatuses;
+    }
+    public void setUserStatuses(Map<Long, UserStatus> userStatuses) {
+        this.userStatuses = userStatuses;
+    }
 
+    // Inner class to hold user status
+    public static class UserStatus implements Serializable {
+        private static final long serialVersionUID = 1L;
+        private String username;
+        private boolean isMuted;
+
+        public UserStatus(String username, boolean isMuted) {
+            this.username = username;
+            this.isMuted = isMuted;
+        }
+
+        // Getters and Setters
+        public String getUsername() {
+            return username;
+        }
+
+        public void setUsername(String username) {
+            this.username = username;
+        }
+
+        public boolean isMuted() {
+            return isMuted;
+        }
+
+        public void setMuted(boolean isMuted) {
+            this.isMuted = isMuted;
+        }
+    }
     // Getters and setters for diceCount
     public int getDiceCount() {
         return diceCount;

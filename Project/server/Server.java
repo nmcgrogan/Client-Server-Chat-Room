@@ -4,14 +4,16 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
-import java.util.logging.Logger;
-import Project.common.Constants;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Logger;
+
+import Project.common.Constants;
 
 public enum Server {
     INSTANCE;
@@ -27,16 +29,22 @@ public enum Server {
         return usernameToClientIdMap.get(username);
     }
     private Map<String, Long> usernameToClientIdMap = new ConcurrentHashMap<>();
+    private Map<Long, ServerThread> activeClientThreads = new ConcurrentHashMap<>();
 
     private Queue<ServerThread> incomingClients = new LinkedList<ServerThread>();
     // https://www.geeksforgeeks.org/killing-threads-in-java/
     private volatile boolean isRunning = false;
+    public Collection<ServerThread> getActiveClientThreads() {
+    return activeClientThreads.values();
+}
+
+
 
     private void start(int port) {
         this.port = port;
         // server listening
         try (ServerSocket serverSocket = new ServerSocket(port);) {
-            Socket incoming_client = null;
+            Socket incoming_client = serverSocket.accept();
             logger.info(String.format("Server is listening on port %s", port));
             isRunning = true;
            // Room.server = this;
@@ -48,7 +56,7 @@ public enum Server {
                 logger.info("Waiting for next client");
                 if (incoming_client != null) {
                     logger.info("Client connected");
-                    ServerThread sClient = new ServerThread(incoming_client, lobby);
+                    ServerThread sClient = new ServerThread(incoming_client, lobby,Server.INSTANCE);
                     sClient.start();
                     incomingClients.add(sClient);
                     incoming_client = null;
@@ -95,13 +103,17 @@ public enum Server {
     void handleIncomingClient(ServerThread client) {
         client.setClientId(nextClientId);// server reference
         client.sendClientId(nextClientId);// client reference
+        client.setClientId(nextClientId); // server reference
+        activeClientThreads.put(nextClientId, client); // Store the client thread
         nextClientId++;
         if (nextClientId < 0) {// will use overflow to reset our counter
             nextClientId = 1;
         }
         joinRoom(Constants.LOBBY, client);
     }
-
+ public ServerThread findClientThreadById(long clientId) {
+        return activeClientThreads.get(clientId);
+    }
     /***
      * Helper function to check if room exists by case insensitive name
      * 
@@ -232,10 +244,8 @@ public enum Server {
             // You may handle the flip command here if needed
             return true;
         } else if (message.equalsIgnoreCase("/mute")) {
-            // You may handle the flip command here if needed
             return true;
         } else if (message.equalsIgnoreCase("/unmute")) {
-            // You may handle the flip command here if needed
             return true;
         }
         return false;

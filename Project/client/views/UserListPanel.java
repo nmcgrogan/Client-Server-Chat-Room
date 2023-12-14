@@ -1,10 +1,14 @@
 package Project.client.views;
 
+
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.event.ContainerEvent;
 import java.awt.event.ContainerListener;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -13,6 +17,8 @@ import javax.swing.JEditorPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.ScrollPaneConstants;
+import javax.swing.SwingUtilities;
+
 
 import Project.client.ClientUtils;
 import Project.client.ICardControls;
@@ -21,8 +27,10 @@ public class UserListPanel extends JPanel {
     JPanel userListArea;
     private static Logger logger = Logger.getLogger(UserListPanel.class.getName());
 
-    public UserListPanel(ICardControls controls) {
+
+     public UserListPanel(ICardControls controls) {
         super(new BorderLayout(10, 10));
+       
         JPanel wrapper = new JPanel();
         wrapper.setLayout(new BoxLayout(wrapper, BoxLayout.Y_AXIS));
         JPanel content = new JPanel();
@@ -61,13 +69,13 @@ public class UserListPanel extends JPanel {
 
         });
     }
-
     protected void addUserListItem(long clientId, String clientName) {
         logger.log(Level.INFO, "Adding user to list: " + clientName);
         JPanel content = userListArea;
         logger.log(Level.INFO, "Userlist: " + content.getSize());
         JEditorPane textContainer = new JEditorPane("text/plain", clientName);
         textContainer.setName(clientId + "");
+
         // sizes the panel to attempt to take up the width of the container
         // and expand in height based on word wrapping
         textContainer.setLayout(null);
@@ -82,6 +90,17 @@ public class UserListPanel extends JPanel {
         content.add(textContainer);
     }
 
+    public void updateUserMuteStatus(long clientId, boolean isMuted) {
+        SwingUtilities.invokeLater(() -> {
+            for (Component comp : userListArea.getComponents()) {
+                if (comp instanceof JEditorPane && comp.getName().equals(String.valueOf(clientId))) {
+                    JEditorPane userComp = (JEditorPane) comp;
+                    userComp.setForeground(isMuted ? Color.GRAY : Color.BLACK);
+                    break;
+                }
+            }
+        });
+    }
     protected void removeUserListItem(long clientId) {
         logger.log(Level.INFO, "removing user list item for id " + clientId);
         Component[] cs = userListArea.getComponents();
