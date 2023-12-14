@@ -1,6 +1,7 @@
 package Project.client;
 
 import java.awt.CardLayout;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
@@ -10,20 +11,26 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
 import java.util.Hashtable;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.swing.JEditorPane;
 import javax.swing.JFrame;
 import javax.swing.JMenuBar;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 
 import Project.client.views.ChatPanel;
 import Project.client.views.ConnectionPanel;
 import Project.client.views.Menu;
 import Project.client.views.RoomsPanel;
 import Project.client.views.UserInputPanel;
+import Project.client.views.UserListPanel;
 import Project.common.Constants;
+import Project.common.Payload;
+import Project.common.PayloadType;
 
 public class ClientUI extends JFrame implements IClientEvents, ICardControls {
     CardLayout card = null;// accessible so we can call next() and previous()
@@ -32,7 +39,7 @@ public class ClientUI extends JFrame implements IClientEvents, ICardControls {
     private static Logger logger = Logger.getLogger(ClientUI.class.getName());
     private JPanel currentCardPanel = null;
     private Card currentCard = Card.CONNECT;
-
+    private UserListPanel userListPanel;
     private Hashtable<Long, String> userList = new Hashtable<Long, String>();
 
     private long myId = Constants.DEFAULT_CLIENT_ID;
@@ -47,6 +54,7 @@ public class ClientUI extends JFrame implements IClientEvents, ICardControls {
         super(title);// call the parent's constructor
         originalTitle = title;
         container = getContentPane();
+        userListPanel = new UserListPanel(this);
         container.addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
@@ -103,6 +111,30 @@ public class ClientUI extends JFrame implements IClientEvents, ICardControls {
         setVisible(true);
     }
 
+    @Override
+public void onUserStatusUpdate(Payload payload) {
+    if (payload.getPayloadType() == PayloadType.USER_STATUS_UPDATE) {
+        Map<Long, Payload.UserStatus> userStatuses = payload.getUserStatuses();
+        userStatuses.forEach((userId, status) -> {
+            // Call the updateUserMuteStatus method in userListPanel
+            userListPanel.updateUserMuteStatus(userId, status.isMuted());
+        });
+    }
+}
+    public void updateUserMuteStatus(Payload payload) {
+    SwingUtilities.invokeLater(() -> {
+        Map<Long, Payload.UserStatus> userStatuses = payload.getUserStatuses();
+        userStatuses.forEach((userId, userStatus) -> {
+            for (Component comp : userListPanel.getComponents()) {
+                if (comp instanceof JEditorPane && comp.getName().equals(String.valueOf(userId))) {
+                    JEditorPane userComp = (JEditorPane) comp;
+                    userComp.setForeground(userStatus.isMuted() ? Color.GRAY : Color.BLACK);
+                    break;
+                }
+            }
+        });
+    });
+}
     private void findAndSetCurrentPanel() {
         for (Component c : container.getComponents()) {
             if (c.isVisible()) {

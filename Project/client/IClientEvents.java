@@ -1,5 +1,5 @@
 package Project.client;
-
+import Project.common.Payload;
 public interface IClientEvents {
     /**
      * Triggered when a client connects
@@ -61,4 +61,17 @@ public interface IClientEvents {
      * @param roomName
      */
     void onRoomJoin(String roomName);
-}
+
+ /**
+     * Triggered when user status update is received
+     *
+     * @param payload The payload containing user statuses.
+     */
+    void updateUserMuteStatus(Payload payload);
+
+/**
+ * Triggered when user status update is received
+ *
+ * @param payload The payload containing user statuses.
+ */
+void onUserStatusUpdate(Payload payload);}

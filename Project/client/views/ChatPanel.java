@@ -243,7 +243,10 @@ input.add(exportButton);
         JScrollBar vertical = ((JScrollPane) chatArea.getParent().getParent()).getVerticalScrollBar();
         vertical.setValue(vertical.getMaximum());
     }
-
+    public void updateUserListItem(long clientId, boolean isMuted) {
+        // Code to update the visual representation of the user list item.
+        // If 'isMuted' is true, gray out the user's name.
+    }
     public String processAllStyles(String text) {
           // Process underline
         text = text.replaceAll("__(.*?)__", "<u>$1</u>");

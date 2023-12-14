@@ -21,6 +21,7 @@ import java.util.stream.Collectors;
 
 import Project.common.Constants;
 import Project.common.Payload;
+//import Project.common.Payload.UserStatus;
 import Project.common.PayloadType;
 import Project.common.Phase;
 import Project.common.RoomResultPayload;
@@ -32,7 +33,7 @@ public class ServerThread extends Thread {
     private String clientName;
     private boolean isRunning = false;
     private ObjectOutputStream out;// exposed here for send()
-     //private Server server;// ref to our server so we can call methods on it
+     private Server server;// ref to our server so we can call methods on it
     // more easily
     private Room currentRoom;
     private static Logger logger = Logger.getLogger(ServerThread.class.getName());
@@ -41,8 +42,12 @@ public class ServerThread extends Thread {
     private Map<Long, String> clientIdToUsername = new HashMap<>();
     private Set<Long> mutedClients = new HashSet<>();
     private static final String MUTE_LIST_DIR = System.getProperty("user.home") + File.separator + "mute_lists";
+   
+    
+
     
     
+    /*nm874 */
         private void saveMuteList() {
             try {
                 // Create the directory if it doesn't exist
@@ -107,23 +112,11 @@ private void loadMuteList() {
 
   // Setter for mutedClients
 public void muteClient(Long clientId) {
-    try {
-        mutedClients.add(clientId);
-        saveMuteList();
-    } catch (Exception e) {
-        // Handle the exception
-        e.printStackTrace();
-    }
+    updateMuteList("/mute " + getClientNameById(clientId), clientId, true);
 }
-
 public void unmuteClient(Long clientId) {
-    try {
-        mutedClients.remove(clientId);
-        saveMuteList();
-    } catch (Exception e) {
-        // Handle the exception
-        e.printStackTrace();
-    }
+    updateMuteList("/unmute " + getClientNameById(clientId), clientId, false);
+
 }
     
 
@@ -139,7 +132,8 @@ public void unmuteClient(Long clientId) {
         return isRunning;
     }
 
-    public ServerThread(Socket myClient, Room room) {
+    public ServerThread(Socket myClient, Room room,Server server) {
+        this.server = server;
         logger.info("ServerThread created");
         // get communication channels to single client
         this.client = myClient;
@@ -269,7 +263,7 @@ public void unmuteClient(Long clientId) {
         p.setClientId(clientId);
         if (mutedClients.contains(clientId)) {
             // Skip sending if the recipient has muted the sender
-            return false;
+            return true;
         }
             // Process the message for styling
         message = textStyling.processAllStyles(message);
@@ -343,11 +337,11 @@ public void unmuteClient(Long clientId) {
             processWhisperCommand(p.getMessage(), p.getClientId());
             break;
             case MUTE:
-                updateMuteList(p.getMessage(), p.getClientId(), true);
-                break;
+            muteClient(p.getClientId());
+            break;
             case UNMUTE:
-                updateMuteList(p.getMessage(), p.getClientId(), false);
-                break;
+            unmuteClient(p.getClientId());
+            break;
             case ROLL:
                 // Extract command and clientId from Payload and process
                 processRollCommand(p.getMessage(), p.getClientId());
@@ -425,29 +419,39 @@ private void processWhisperCommand(String message, long clientId) {
     }
 }
  /*Nm874
- * 12/7/23
+ * 12/12/23
  */
-private void updateMuteList(String command, long clientId, boolean mute) {
-    // Assuming the command format is "/mute username" or "/unmute username"
+private synchronized void updateMuteList(String command, long clientId, boolean mute) {
     String[] parts = command.split(" ", 2);
     if (parts.length == 2) {
         String targetUsername = parts[1].trim();
         Long targetClientId = findClientIdByUsername(targetUsername);
+        ServerThread targetClientThread = Server.INSTANCE.findClientThreadById(targetClientId);
+
         if (targetClientId != null) {
             if (mute) {
                 mutedClients.add(targetClientId);
+                saveMuteList(); // Save the updated mute list
+                // Inform the client that the mute operation was successful
                 sendMessage(clientId, "You have muted " + targetUsername + ".");
+                targetClientThread.sendMessage(targetClientId, "You have been muted by " + getClientNameById(clientId) + ".");
             } else {
                 mutedClients.remove(targetClientId);
+                saveMuteList(); // Save the updated mute list
+                // Inform the client that the unmute operation was successful
                 sendMessage(clientId, "You have unmuted " + targetUsername + ".");
+                targetClientThread.sendMessage(targetClientId, "You have been unmuted by " + getClientNameById(clientId) + ".");
             }
         } else {
+            // Inform the client that the target user was not found
             sendMessage(clientId, "User " + targetUsername + " not found.");
         }
     } else {
+        // Inform the client that the command format is invalid
         sendMessage(clientId, "Invalid command format.");
     }
 }
+
 
 private Long findClientIdByUsername(String username) {
     // Iterate through all clients to find the matching username
