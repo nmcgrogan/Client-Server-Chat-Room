@@ -33,7 +33,7 @@ public class ServerThread extends Thread {
     private String clientName;
     private boolean isRunning = false;
     private ObjectOutputStream out;// exposed here for send()
-     private Server server;// ref to our server so we can call methods on it
+     private Server server;// ref to our server so we can call methods on i
     // more easily
     private Room currentRoom;
     private static Logger logger = Logger.getLogger(ServerThread.class.getName());
